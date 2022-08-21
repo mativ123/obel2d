@@ -4,13 +4,16 @@
 #include <vector>
 #include <array>
 #include <filesystem>
+#include <math.h>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
+#include <SDL2/SDL_ttf.h>
 
 #include "../common/func.cpp"
 #include "../common/images.h"
+#include "../common/fonts.h"
 #include "json.hpp"
 
 using json = nlohmann::json;
@@ -21,7 +24,7 @@ void SaveToJSON(std::vector<std::array<int, 2>> posList);
 std::vector<std::array<int, 2>> LoadFromJSON(std::vector<std::array<int, 2>> posList);
 std::vector<std::array<int, 2>> Creating(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI);
 void Menu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI);
-void drawMenuButtons(SDL_Renderer *renderer, std::vector<SDL_Rect> buttons, int windowWidth, int windowHeight);
+void DrawMenuButtons(SDL_Renderer *renderer, std::vector<SDL_Rect> buttons, std::vector<std::string> buttonTitles, int windowWidth, int windowHeight);
 
 int main(int argc, char *argv[])
 {
@@ -36,6 +39,7 @@ int main(int argc, char *argv[])
 
     SDL_Init(SDL_INIT_VIDEO);
     IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
+    TTF_Init();
 
     Image obel;
     obel.init(renderer, "obelLectio.jpg");
@@ -64,6 +68,19 @@ int main(int argc, char *argv[])
                 break;
         }
     }
+
+    SDL_DestroyWindow(window);
+    SDL_DestroyRenderer(renderer);
+
+    window = nullptr;
+    renderer = nullptr;
+
+    obel.destroyTexture();
+
+    SDL_Quit();
+    IMG_Quit();
+    TTF_Quit();
+
     return 0;
 }
 
@@ -237,22 +254,42 @@ void Menu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *runni
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
 
-    drawMenuButtons(renderer, { createButton, exitButton }, windowWidth, windowHeight);
+    DrawMenuButtons(renderer, { createButton, exitButton }, { "create", "exit" }, windowWidth, windowHeight);
 
     SDL_RenderPresent(renderer);
 }
 
-void drawMenuButtons(SDL_Renderer *renderer, std::vector<SDL_Rect> buttons, int windowWidth, int windowHeight)
+void DrawMenuButtons(SDL_Renderer *renderer, std::vector<SDL_Rect> buttons, std::vector<std::string> buttonTitles, int windowWidth, int windowHeight)
 {
-    int y { 100 };
+    Text buttonText;
+    buttonText.color = { 255, 255, 255 };
+    buttonText.fontSize = 20;
+    buttonText.init(renderer, "arial.ttf");
+
     int offset { 40 };
+
+    int uiHeight { };
+
+    for(SDL_Rect i : buttons)
+    {
+        uiHeight += i.h + offset;
+    }
+    uiHeight -= offset;
+
+    int y { windowHeight / 2 - uiHeight / 2 };
 
     for(int i { }; i<buttons.size(); ++i)
     {
         buttons[i].y = y;
         buttons[i].x = windowWidth / 2 - buttons[i].w / 2;
-        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderFillRect(renderer, &buttons[i]);
+
+        buttonText.x = std::round(buttons[i].x + (buttons[i].w / 2 - buttonText.w / 2));
+        buttonText.y = std::round(buttons[i].y + (buttons[i].h / 2 - buttonText.h / 2));
+        buttonText.textString = buttonTitles[i];
+        buttonText.draw(renderer);
+        std::cout << "x: " << buttonText.x << ", y: " << buttonText.y << ", w: " << buttonText.w << ", h: " << buttonText.h << '\n';
 
         y += buttons[i].h + offset;
     }
