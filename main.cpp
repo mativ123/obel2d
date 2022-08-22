@@ -21,11 +21,14 @@ using json = nlohmann::json;
 std::vector<std::array<int, 2>> Funktion1(int mouseX, int mouseY, std::vector<std::array<int, 2>> posList, int windowWidth, int windowHeight);
 void DrawLines(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, int mouseX, int  mouseY, int windowWidth, int windowHeight);
 void SaveToJSON(std::vector<std::array<int, 2>> posList);
-std::vector<std::array<int, 2>> LoadFromJSON(std::vector<std::array<int, 2>> posList);
+std::ifstream LoadJSON();
 std::vector<std::array<int, 2>> Creating(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI);
 void Menu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI);
-void DrawMenuButtons(SDL_Renderer *renderer, std::vector<SDL_Rect> buttons, std::vector<std::string> buttonTitles, int windowWidth, int windowHeight, int mouseX, int mouseY);
+void DrawMenuButtons(SDL_Renderer *renderer, std::vector<SDL_Rect> buttons, std::vector<std::string> buttonTitles, int mouseX, int mouseY);
 bool GetMouseHover(SDL_Rect button, int mouseX, int mouseY);
+std::vector<SDL_Rect> SetButtonCoords(int windowWidth, int windowHeight, int buttonWidth, int buttonHeight, int offset, std::vector<SDL_Rect> buttons);
+std::vector<std::array<int, 2>> ViewMenu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI);
+void View(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, SDL_Event ev, bool *running, int *whichUI);
 
 int main(int argc, char *argv[])
 {
@@ -63,6 +66,12 @@ int main(int argc, char *argv[])
                 break;
             case 1:
                 posList = Creating(renderer, posList, windowWidth, windowHeight, &running, ev, &whichUI);
+                break;
+            case 2:
+                posList = ViewMenu(renderer, windowWidth, windowHeight, &running, ev, &whichUI);
+                break;
+            case 3:
+                View(renderer, posList, ev, &running, &whichUI);
                 break;
             default:
                 Menu(renderer, windowWidth, windowHeight, &running, ev, &whichUI);
@@ -152,16 +161,11 @@ void SaveToJSON(std::vector<std::array<int, 2>> posList)
     o << std::setw(4) << j << '\n';
 }
 
-std::vector<std::array<int, 2>> LoadFromJSON(std::vector<std::array<int, 2>> posList)
+std::ifstream LoadJSON()
 {
     std::ifstream file("map.json");
-    json j;
-    file >> j;
 
-
-    posList = j[std::to_string(j.size())];
-
-    return posList;
+    return file;
 }
 
 std::vector<std::array<int, 2>> Creating(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI)
@@ -188,6 +192,7 @@ std::vector<std::array<int, 2>> Creating(SDL_Renderer *renderer, std::vector<std
             {
                 case SDLK_s:
                     SaveToJSON(posList);
+                    *whichUI = 0;
                     break;
                 case SDLK_r:
                     posList.clear();
@@ -201,6 +206,9 @@ std::vector<std::array<int, 2>> Creating(SDL_Renderer *renderer, std::vector<std
                     break;
                 case SDLK_MINUS:
                     *whichUI -= 1;
+                    break;
+                case SDLK_ESCAPE:
+                    *whichUI = 0;
                     break;
             }
         }
@@ -224,16 +232,11 @@ void Menu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *runni
 
     int buttonWidth { 350 };
     int buttonHeight { 100 };
+    int offset { 40 };
 
-    SDL_Rect createButton;
-    createButton.w = buttonWidth;
-    createButton.h = buttonHeight;
+    std::vector<SDL_Rect> buttons(3);
 
-    SDL_Rect exitButton;
-    exitButton.w = buttonWidth;
-    exitButton.h = buttonHeight;
-
-
+    buttons = SetButtonCoords(windowWidth, windowHeight, buttonWidth, buttonHeight, offset, buttons);
 
     while(SDL_PollEvent(&ev) != 0)
     {
@@ -249,16 +252,20 @@ void Menu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *runni
                 case SDLK_MINUS:
                     *whichUI -= 1;
                     break;
+                case SDLK_ESCAPE:
+                    *running = false;
+                    break;
             }
         } else if(ev.type == SDL_MOUSEBUTTONDOWN)
         {
             switch(ev.button.button)
             {
                 case SDL_BUTTON_LEFT:
-                    std::cout << "click\n";
-                    if(GetMouseHover(createButton, mouseX, mouseY))
+                    if(GetMouseHover(buttons[0], mouseX, mouseY))
                         *whichUI = 1;
-                    else if(GetMouseHover(exitButton, mouseX, mouseY))
+                    else if(GetMouseHover(buttons[1], mouseX, mouseY))
+                        *whichUI = 2;
+                    else if(GetMouseHover(buttons[2], mouseX, mouseY))
                         *running = false;
                     break;
             }
@@ -269,12 +276,12 @@ void Menu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *runni
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
 
-    DrawMenuButtons(renderer, { createButton, exitButton }, { "create", "exit" }, windowWidth, windowHeight, mouseX, mouseY);
+    DrawMenuButtons(renderer, buttons, { "create", "view", "exit" }, mouseX, mouseY);
 
     SDL_RenderPresent(renderer);
 }
 
-void DrawMenuButtons(SDL_Renderer *renderer, std::vector<SDL_Rect> buttons, std::vector<std::string> buttonTitles, int windowWidth, int windowHeight, int mouseX, int mouseY)
+void DrawMenuButtons(SDL_Renderer *renderer, std::vector<SDL_Rect> buttons, std::vector<std::string> buttonTitles, int mouseX, int mouseY)
 {
     SDL_Color hover { 85, 106, 130, 255 };
     SDL_Color standard { 66, 83, 102, 255 };
@@ -286,22 +293,8 @@ void DrawMenuButtons(SDL_Renderer *renderer, std::vector<SDL_Rect> buttons, std:
 
     SDL_Rect textRect;
 
-    int offset { 40 };
-
-    int uiHeight { };
-
-    for(SDL_Rect i : buttons)
-    {
-        uiHeight += i.h + offset;
-    }
-    uiHeight -= offset;
-
-    int y { windowHeight / 2 - uiHeight / 2 };
-
     for(int i { }; i<buttons.size(); ++i)
     {
-        buttons[i].y = y;
-        buttons[i].x = windowWidth / 2 - buttons[i].w / 2;
         roundedBoxRGBA(renderer, buttons[i].x - 5, buttons[i].y - 5, buttons[i].x + buttons[i].w + 5, buttons[i].y + buttons[i].h + 5, 25, 43, 53, 64, 255);
         if(GetMouseHover(buttons[i], mouseX, mouseY))
             roundedBoxRGBA(renderer, buttons[i].x + 5, buttons[i].y + 5, buttons[i].x + buttons[i].w - 5, buttons[i].y + buttons[i].h - 5, 15, hover.r, hover.g, hover.b, hover.a);
@@ -317,9 +310,6 @@ void DrawMenuButtons(SDL_Renderer *renderer, std::vector<SDL_Rect> buttons, std:
         textRect.w = buttonText.w;
         textRect.x = buttonText.x;
         textRect.y = buttonText.y;
-
-
-        y += buttons[i].h + offset;
     }
 
     buttonText.destroyFont();
@@ -331,4 +321,119 @@ bool GetMouseHover(SDL_Rect button, int mouseX, int mouseY)
         return true;
 
     return false;
+}
+
+std::vector<SDL_Rect> SetButtonCoords(int windowWidth, int windowHeight, int buttonWidth, int buttonHeight, int offset, std::vector<SDL_Rect> buttons)
+{
+    for(int i { }; i<buttons.size(); ++i)
+    {
+        buttons[i].w = buttonWidth;
+        buttons[i].h = buttonHeight;
+        buttons[i].x = windowWidth / 2 - buttons[i].w / 2;
+        buttons[i].y = windowHeight / 2 - (buttons.size() * buttonHeight  + (buttons.size() - 1) * offset) / 2 + i * (offset + buttonHeight);
+    }
+
+    return buttons;
+}
+
+std::vector<std::array<int, 2>> ViewMenu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI)
+{
+    json j;
+    LoadJSON() >> j;
+    std::vector<std::string> titles(j.size());
+    for(int i { }; i<titles.size(); ++i)
+        titles[i] = std::to_string(i + 1);
+
+    int offset ( 40 );
+    std::vector<SDL_Rect> buttons(j.size());
+    int buttonHeight { (windowHeight - offset * static_cast<int>(j.size())) / static_cast<int>(j.size()) };
+    buttons = SetButtonCoords(windowWidth, windowHeight, 350, buttonHeight, offset, buttons);
+
+    std::vector<std::array<int, 2>> posList;
+
+    int mouseX { };
+    int mouseY { };
+    SDL_GetMouseState(&mouseX, &mouseY);
+
+    while(SDL_PollEvent(&ev) != 0)
+    {
+        if(ev.type == SDL_QUIT)
+        {
+            *running = false;
+        } else if(ev.type == SDL_KEYDOWN)
+        {
+            switch(ev.key.keysym.sym)
+            {
+                case SDLK_PLUS:
+                    ++*whichUI;
+                    break;
+                case SDLK_MINUS:
+                    --*whichUI;
+                    break;
+                case SDLK_ESCAPE:
+                    *whichUI = 0;
+                    break;
+            }
+        } else if(ev.type == SDL_MOUSEBUTTONDOWN)
+        {
+            switch(ev.button.button)
+            {
+                case SDL_BUTTON_LEFT:
+                    for(int i { }; i<buttons.size(); ++i)
+                    {
+                        if(GetMouseHover(buttons[i], mouseX, mouseY))
+                        {
+                            posList = j[std::to_string(i + 1)];
+                            *whichUI = 3;
+                        }
+                    }
+                    break;
+            }
+        }
+    }
+
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderClear(renderer);
+
+    DrawMenuButtons(renderer, buttons, titles, mouseX, mouseY);
+
+    SDL_RenderPresent(renderer);
+
+    return posList;
+}
+
+void View(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, SDL_Event ev, bool *running, int *whichUI)
+{
+    while(SDL_PollEvent(&ev) != 0)
+    {
+        if(ev.type == SDL_QUIT)
+            *running = false;
+        else if(ev.type == SDL_KEYDOWN)
+        {
+            switch(ev.key.keysym.sym)
+            {
+                case SDLK_PLUS:
+                    ++*whichUI;
+                    break;
+                case SDLK_MINUS:
+                    --*whichUI;
+                    break;
+                case SDLK_ESCAPE:
+                    *whichUI = 2;
+                    break;
+            }
+        }
+
+    }
+
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderClear(renderer);
+
+    for(int i { }; i<posList.size(); ++i)
+    {
+        if(i < posList.size() - 1)
+            thickLineRGBA(renderer, posList[i][0], posList[i][1], posList[i + 1][0], posList[i + 1][1], 10, 0, 0, 0, 255);
+    }
+
+    SDL_RenderPresent(renderer);
 }
