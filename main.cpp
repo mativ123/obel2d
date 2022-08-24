@@ -247,17 +247,17 @@ std::vector<std::array<int, 2>> AddFinalPoint(int mouseX, int mouseY, std::vecto
 {
     if(posList[0][0] == 0)
     {
-        std::array<int, 2> temp { 500, posList[posList.size() - 1][1] };
+        std::array<int, 2> temp { windowWidth, posList[posList.size() - 1][1] };
         posList.push_back(temp);
-    } else if(posList[0][0] == 500)
+    } else if(posList[0][0] == windowWidth)
     {
         std::array<int, 2> temp { 0, posList[posList.size() - 1][1] };
         posList.push_back(temp);
     } else if(posList[0][1] == 0)
     {
-        std::array<int, 2> temp { posList[posList.size() - 1][0], 500  };
+        std::array<int, 2> temp { posList[posList.size() - 1][0], windowWidth };
         posList.push_back(temp);
-    } else if(posList[0][1] == 500)
+    } else if(posList[0][1] == windowWidth)
     {
         std::array<int, 2> temp { posList[posList.size() - 1][0], 0  };
         posList.push_back(temp);
