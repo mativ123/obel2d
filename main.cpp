@@ -15,6 +15,7 @@
 #include "../common/images.h"
 #include "../common/fonts.h"
 #include "json.hpp"
+#include "obel.h"
 
 using json = nlohmann::json;
 
@@ -29,11 +30,13 @@ bool GetMouseHover(SDL_Rect button, int mouseX, int mouseY);
 std::vector<SDL_Rect> SetButtonCoords(int windowWidth, int windowHeight, int buttonWidth, int buttonHeight, int offset, std::vector<SDL_Rect> buttons);
 std::vector<std::array<int, 2>> ViewMenu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI);
 void View(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, SDL_Event ev, bool *running, int *whichUI);
+std::vector<std::array<int, 2>> AddFinalPoint(int mouseX, int mouseY, std::vector<std::array<int, 2>> posList, int windowWidth, int windowHeight);
+std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth);
 
 int main(int argc, char *argv[])
 {
-    int windowWidth { 500 };
-    int windowHeight { 500 };
+    int windowWidth { 700 };
+    int windowHeight { 700 };
 
     int mouseX { };
     int mouseY { };
@@ -45,16 +48,22 @@ int main(int argc, char *argv[])
     IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
     TTF_Init();
 
-    Image obel;
-    obel.init(renderer, "obelLectio.jpg");
-    obel.resizeKA('w', 20, windowHeight);
+    Image obelBilled;
+    obelBilled.init(renderer, "obelLectio.jpg");
+    obelBilled.resizeKA('w', 200, windowHeight);
+
+    Obel obel;
+    obel.billed = obelBilled;
+    obel.speed = 1;
+
+    std::vector<Obel> obler { obel };
 
     std::vector<std::array<int, 2>> posList;
 
     SDL_Event ev;
     bool running { true };
 
-    // 0 = menu, 1 = creating, 2 = viewing
+    // 0 = menu, 1 = creating, 2 = viewing menu, 3 = viewing, 4 = Play
     int whichUI { 0 };
 
     while(running)
@@ -73,6 +82,9 @@ int main(int argc, char *argv[])
             case 3:
                 View(renderer, posList, ev, &running, &whichUI);
                 break;
+            case 4:
+                obler = Play(renderer, obler, &running, &whichUI, ev, windowWidth);
+                break;
             default:
                 Menu(renderer, windowWidth, windowHeight, &running, ev, &whichUI);
                 break;
@@ -85,7 +97,7 @@ int main(int argc, char *argv[])
     window = nullptr;
     renderer = nullptr;
 
-    obel.destroyTexture();
+    obelBilled.destroyTexture();
 
     SDL_Quit();
     IMG_Quit();
@@ -191,6 +203,7 @@ std::vector<std::array<int, 2>> Creating(SDL_Renderer *renderer, std::vector<std
             switch(ev.key.keysym.sym)
             {
                 case SDLK_s:
+                    posList = AddFinalPoint(mouseX, mouseY, posList, windowWidth, windowHeight);
                     SaveToJSON(posList);
                     *whichUI = 0;
                     break;
@@ -224,17 +237,41 @@ std::vector<std::array<int, 2>> Creating(SDL_Renderer *renderer, std::vector<std
     return posList;
 }
 
+std::vector<std::array<int, 2>> AddFinalPoint(int mouseX, int mouseY, std::vector<std::array<int, 2>> posList, int windowWidth, int windowHeight)
+{
+    if(posList[0][0] == 0)
+    {
+        std::array<int, 2> temp { 500, posList[posList.size() - 1][1] };
+        posList.push_back(temp);
+    } else if(posList[0][0] == 500)
+    {
+        std::array<int, 2> temp { 0, posList[posList.size() - 1][1] };
+        posList.push_back(temp);
+    } else if(posList[0][1] == 0)
+    {
+        std::array<int, 2> temp { posList[posList.size() - 1][0], 500  };
+        posList.push_back(temp);
+    } else if(posList[0][1] == 500)
+    {
+        std::array<int, 2> temp { posList[posList.size() - 1][0], 0  };
+        posList.push_back(temp);
+    }
+
+    return posList;
+}
+
 void Menu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI)
 {
     int mouseX { };
     int mouseY { };
     SDL_GetMouseState(&mouseX, &mouseY);
 
-    int buttonWidth { 350 };
-    int buttonHeight { 100 };
-    int offset { 40 };
 
-    std::vector<SDL_Rect> buttons(3);
+    int buttonWidth { 350 };
+    int buttonHeight { 80 };
+    int offset { 30 };
+
+    std::vector<SDL_Rect> buttons(4);
 
     buttons = SetButtonCoords(windowWidth, windowHeight, buttonWidth, buttonHeight, offset, buttons);
 
@@ -262,10 +299,12 @@ void Menu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *runni
             {
                 case SDL_BUTTON_LEFT:
                     if(GetMouseHover(buttons[0], mouseX, mouseY))
-                        *whichUI = 1;
+                        *whichUI = 4;
                     else if(GetMouseHover(buttons[1], mouseX, mouseY))
-                        *whichUI = 2;
+                        *whichUI = 1;
                     else if(GetMouseHover(buttons[2], mouseX, mouseY))
+                        *whichUI = 2;
+                    else if(GetMouseHover(buttons[3], mouseX, mouseY))
                         *running = false;
                     break;
             }
@@ -276,7 +315,7 @@ void Menu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *runni
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
 
-    DrawMenuButtons(renderer, buttons, { "create", "view", "exit" }, mouseX, mouseY);
+    DrawMenuButtons(renderer, buttons, { "Play", "create", "view", "exit" }, mouseX, mouseY);
 
     SDL_RenderPresent(renderer);
 }
@@ -436,4 +475,40 @@ void View(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, SDL_E
     }
 
     SDL_RenderPresent(renderer);
+}
+
+std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth)
+{
+    while(SDL_PollEvent(&ev) != 0)
+    {
+        if(ev.type == SDL_QUIT)
+            *running = false;
+        if(ev.type == SDL_KEYDOWN)
+        {
+            switch(ev.key.keysym.sym)
+            {
+                case SDLK_ESCAPE:
+                    *whichUI = 0;
+                    for(int i { }; i<obler.size(); ++i)
+                        obler[i].billed.x = 0;
+                    break;
+            }
+
+        }
+    }
+
+    obler[0].obelMove();
+   // if(obler[obler.size() - 1].x >= windowWidth)
+   // {
+
+   // }
+
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderClear(renderer);
+
+    obler[0].drawObel(renderer);
+
+    SDL_RenderPresent(renderer);
+
+    return obler;
 }
