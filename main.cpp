@@ -24,20 +24,19 @@ void DrawLines(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, 
 void SaveToJSON(std::vector<std::array<int, 2>> posList);
 std::ifstream LoadJSON();
 std::vector<std::array<int, 2>> Creating(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI);
-void Menu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI);
+void Menu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI, std::vector<std::array<int, 2>> posList);
 void DrawMenuButtons(SDL_Renderer *renderer, std::vector<SDL_Rect> buttons, std::vector<std::string> buttonTitles, int mouseX, int mouseY);
 bool GetMouseHover(SDL_Rect button, int mouseX, int mouseY);
 std::vector<SDL_Rect> SetButtonCoords(int windowWidth, int windowHeight, int buttonWidth, int buttonHeight, int offset, std::vector<SDL_Rect> buttons);
-std::vector<std::array<int, 2>> ViewMenu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI);
+std::vector<std::array<int, 2>> ViewMenu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI, int nextWindow);
 void View(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, SDL_Event ev, bool *running, int *whichUI);
 std::vector<std::array<int, 2>> AddFinalPoint(int mouseX, int mouseY, std::vector<std::array<int, 2>> posList, int windowWidth, int windowHeight);
-std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth, float deltaTime, Image obelBilled);
+std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth, float deltaTime, Image obelBilled, std::vector<std::array<int, 2>> posList);
 
 int main(int argc, char *argv[])
 {
     int windowWidth { 700 };
     int windowHeight { 700 };
-
 
     int prevTime { 0 };
     int currentTime { 0 };
@@ -62,6 +61,7 @@ int main(int argc, char *argv[])
 
     std::vector<std::array<int, 2>> posList;
 
+
     SDL_Event ev;
     bool running { true };
 
@@ -77,22 +77,25 @@ int main(int argc, char *argv[])
         switch(whichUI)
         {
             case 0:
-                Menu(renderer, windowWidth, windowHeight, &running, ev, &whichUI);
+                Menu(renderer, windowWidth, windowHeight, &running, ev, &whichUI, posList);
                 break;
             case 1:
                 posList = Creating(renderer, posList, windowWidth, windowHeight, &running, ev, &whichUI);
                 break;
             case 2:
-                posList = ViewMenu(renderer, windowWidth, windowHeight, &running, ev, &whichUI);
+                posList = ViewMenu(renderer, windowWidth, windowHeight, &running, ev, &whichUI, 3);
                 break;
             case 3:
                 View(renderer, posList, ev, &running, &whichUI);
                 break;
             case 4:
-                obler = Play(renderer, obler, &running, &whichUI, ev, windowWidth, deltaTime, obelBilled);
+                posList = ViewMenu(renderer, windowWidth, windowHeight, &running, ev, &whichUI, 5);
+                break;
+            case 5:
+                obler = Play(renderer, obler, &running, &whichUI, ev, windowWidth, deltaTime, obelBilled, posList);
                 break;
             default:
-                Menu(renderer, windowWidth, windowHeight, &running, ev, &whichUI);
+                Menu(renderer, windowWidth, windowHeight, &running, ev, &whichUI, posList);
                 break;
         }
     }
@@ -247,17 +250,17 @@ std::vector<std::array<int, 2>> AddFinalPoint(int mouseX, int mouseY, std::vecto
 {
     if(posList[0][0] == 0)
     {
-        std::array<int, 2> temp { 500, posList[posList.size() - 1][1] };
+        std::array<int, 2> temp { windowWidth, posList[posList.size() - 1][1] };
         posList.push_back(temp);
-    } else if(posList[0][0] == 500)
+    } else if(posList[0][0] == windowWidth)
     {
         std::array<int, 2> temp { 0, posList[posList.size() - 1][1] };
         posList.push_back(temp);
     } else if(posList[0][1] == 0)
     {
-        std::array<int, 2> temp { posList[posList.size() - 1][0], 500  };
+        std::array<int, 2> temp { posList[posList.size() - 1][0], windowWidth };
         posList.push_back(temp);
-    } else if(posList[0][1] == 500)
+    } else if(posList[0][1] == windowWidth)
     {
         std::array<int, 2> temp { posList[posList.size() - 1][0], 0  };
         posList.push_back(temp);
@@ -266,18 +269,23 @@ std::vector<std::array<int, 2>> AddFinalPoint(int mouseX, int mouseY, std::vecto
     return posList;
 }
 
-void Menu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI)
+void Menu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI, std::vector<std::array<int, 2>> posList)
 {
     int mouseX { };
     int mouseY { };
     SDL_GetMouseState(&mouseX, &mouseY);
-
 
     int buttonWidth { 350 };
     int buttonHeight { 80 };
     int offset { 30 };
 
     std::vector<SDL_Rect> buttons(4);
+
+    json j;
+    if(std::filesystem::exists("map.json"))
+    {
+        LoadJSON() >> j;
+    }
 
     buttons = SetButtonCoords(windowWidth, windowHeight, buttonWidth, buttonHeight, offset, buttons);
 
@@ -308,7 +316,7 @@ void Menu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *runni
                         *whichUI = 4;
                     else if(GetMouseHover(buttons[1], mouseX, mouseY))
                         *whichUI = 1;
-                    else if(GetMouseHover(buttons[2], mouseX, mouseY))
+                    else if(GetMouseHover(buttons[2], mouseX, mouseY) && j.size() > 0)
                         *whichUI = 2;
                     else if(GetMouseHover(buttons[3], mouseX, mouseY))
                         *running = false;
@@ -381,7 +389,7 @@ std::vector<SDL_Rect> SetButtonCoords(int windowWidth, int windowHeight, int but
     return buttons;
 }
 
-std::vector<std::array<int, 2>> ViewMenu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI)
+std::vector<std::array<int, 2>> ViewMenu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI, int nextWindow)
 {
     json j;
     LoadJSON() >> j;
@@ -429,7 +437,7 @@ std::vector<std::array<int, 2>> ViewMenu(SDL_Renderer *renderer, int windowWidth
                         if(GetMouseHover(buttons[i], mouseX, mouseY))
                         {
                             posList = j[std::to_string(i + 1)];
-                            *whichUI = 3;
+                            *whichUI = nextWindow;
                         }
                     }
                     break;
@@ -483,7 +491,7 @@ void View(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, SDL_E
     SDL_RenderPresent(renderer);
 }
 
-std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth, float deltaTime, Image obelBilled)
+std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth, float deltaTime, Image obelBilled, std::vector<std::array<int, 2>> posList)
 {
     while(SDL_PollEvent(&ev) != 0)
     {
@@ -506,6 +514,8 @@ std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *ru
             {
                 case SDL_BUTTON_LEFT:
                     Obel temp;
+                    temp.x = posList[0][0];
+                    temp.numericaly = posList[0][1];
                     temp.billed = obelBilled;
                     temp.speed = 100;
                     obler.push_back(temp);
@@ -517,9 +527,15 @@ std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *ru
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
 
+    for(int i { }; i<posList.size(); ++i)
+    {
+        if(i < posList.size() - 1)
+            thickLineRGBA(renderer, posList[i][0], posList[i][1], posList[i + 1][0], posList[i + 1][1], 10, 0, 0, 0, 255);
+    }
+
     for(int i { }; i<obler.size(); ++i)
     {
-        obler[i].obelMove(deltaTime);
+        obler[i].obelMove(deltaTime, posList);
         obler[i].countDown -= 1 * deltaTime;
         if(obler[i].billed.x >= windowWidth)
             obler.erase(obler.begin() + i);
