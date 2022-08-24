@@ -31,12 +31,17 @@ std::vector<SDL_Rect> SetButtonCoords(int windowWidth, int windowHeight, int but
 std::vector<std::array<int, 2>> ViewMenu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI);
 void View(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, SDL_Event ev, bool *running, int *whichUI);
 std::vector<std::array<int, 2>> AddFinalPoint(int mouseX, int mouseY, std::vector<std::array<int, 2>> posList, int windowWidth, int windowHeight);
-std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth);
+std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth, float deltaTime, Image obelBilled);
 
 int main(int argc, char *argv[])
 {
     int windowWidth { 700 };
     int windowHeight { 700 };
+
+
+    int prevTime { 0 };
+    int currentTime { 0 };
+    float deltaTime { 0.0f };
 
     int mouseX { };
     int mouseY { };
@@ -50,13 +55,10 @@ int main(int argc, char *argv[])
 
     Image obelBilled;
     obelBilled.init(renderer, "obelLectio.jpg");
-    obelBilled.resizeKA('w', 200, windowHeight);
+    obelBilled.resizeKA('w', 100, windowHeight);
+    obelBilled.x = -obelBilled.w;
 
-    Obel obel;
-    obel.billed = obelBilled;
-    obel.speed = 1;
-
-    std::vector<Obel> obler { obel };
+    std::vector<Obel> obler { };
 
     std::vector<std::array<int, 2>> posList;
 
@@ -68,6 +70,10 @@ int main(int argc, char *argv[])
 
     while(running)
     {
+        prevTime = currentTime;
+        currentTime = SDL_GetTicks();
+        deltaTime = (currentTime - prevTime) / 1000.0f;
+
         switch(whichUI)
         {
             case 0:
@@ -83,7 +89,7 @@ int main(int argc, char *argv[])
                 View(renderer, posList, ev, &running, &whichUI);
                 break;
             case 4:
-                obler = Play(renderer, obler, &running, &whichUI, ev, windowWidth);
+                obler = Play(renderer, obler, &running, &whichUI, ev, windowWidth, deltaTime, obelBilled);
                 break;
             default:
                 Menu(renderer, windowWidth, windowHeight, &running, ev, &whichUI);
@@ -477,13 +483,13 @@ void View(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, SDL_E
     SDL_RenderPresent(renderer);
 }
 
-std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth)
+std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth, float deltaTime, Image obelBilled)
 {
     while(SDL_PollEvent(&ev) != 0)
     {
         if(ev.type == SDL_QUIT)
             *running = false;
-        if(ev.type == SDL_KEYDOWN)
+        else if(ev.type == SDL_KEYDOWN)
         {
             switch(ev.key.keysym.sym)
             {
@@ -494,19 +500,32 @@ std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *ru
                     break;
             }
 
+        } else if(ev.type == SDL_MOUSEBUTTONDOWN)
+        {
+            switch(ev.button.button)
+            {
+                case SDL_BUTTON_LEFT:
+                    Obel temp;
+                    temp.billed = obelBilled;
+                    temp.speed = 100;
+                    obler.push_back(temp);
+            }
         }
     }
 
-    obler[0].obelMove();
-   // if(obler[obler.size() - 1].x >= windowWidth)
-   // {
-
-   // }
 
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
 
-    obler[0].drawObel(renderer);
+    for(int i { }; i<obler.size(); ++i)
+    {
+        obler[i].obelMove(deltaTime);
+        obler[i].countDown -= 1 * deltaTime;
+        if(obler[i].billed.x >= windowWidth)
+            obler.erase(obler.begin() + i);
+
+        obler[i].drawObel(renderer);
+    }
 
     SDL_RenderPresent(renderer);
 
