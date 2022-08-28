@@ -55,7 +55,6 @@ int main(int argc, char *argv[])
     Image obelBilled;
     obelBilled.init(renderer, "obelLectio.jpg");
     obelBilled.resizeKA('w', 100, windowHeight);
-    obelBilled.x = -obelBilled.w;
 
     std::vector<Obel> obler { };
 
@@ -502,9 +501,9 @@ std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *ru
             switch(ev.key.keysym.sym)
             {
                 case SDLK_ESCAPE:
-                    *whichUI = 0;
+                    *whichUI = 4;
                     for(int i { }; i<obler.size(); ++i)
-                        obler[i].billed.x = 0;
+                        obler.clear();
                     break;
             }
 
@@ -514,10 +513,10 @@ std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *ru
             {
                 case SDL_BUTTON_LEFT:
                     Obel temp;
-                    temp.x = posList[0][0];
-                    temp.numericaly = posList[0][1];
+                    temp.initObel(posList, renderer);
                     temp.billed = obelBilled;
                     temp.speed = 100;
+                    temp.hp = 10.5;
                     obler.push_back(temp);
             }
         }
@@ -533,14 +532,18 @@ std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *ru
             thickLineRGBA(renderer, posList[i][0], posList[i][1], posList[i + 1][0], posList[i + 1][1], 10, 0, 0, 0, 255);
     }
 
-    for(int i { }; i<obler.size(); ++i)
+    for(int i { static_cast<int>(obler.size()) - 1}; i>=0; --i)
     {
         obler[i].obelMove(deltaTime, posList);
         obler[i].countDown -= 1 * deltaTime;
-        if(obler[i].billed.x >= windowWidth)
-            obler.erase(obler.begin() + i);
 
         obler[i].drawObel(renderer);
+
+        if(obler[i].reachedPoint == posList.size() - 1 || obler[i].hp <= 0)
+        {
+            obler.erase(obler.begin() + i);
+            obler[i].cleanUp();
+        }
     }
 
     SDL_RenderPresent(renderer);
