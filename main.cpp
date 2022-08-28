@@ -516,7 +516,7 @@ std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *ru
                     temp.initObel(posList, renderer);
                     temp.billed = obelBilled;
                     temp.speed = 100;
-                    temp.hp = 10.5;
+                    temp.hp = 10;
                     obler.push_back(temp);
             }
         }
