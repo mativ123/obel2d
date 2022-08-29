@@ -31,7 +31,9 @@ std::vector<SDL_Rect> SetButtonCoords(int windowWidth, int windowHeight, int but
 std::vector<std::array<int, 2>> ViewMenu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI, int nextWindow);
 void View(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, SDL_Event ev, bool *running, int *whichUI);
 std::vector<std::array<int, 2>> AddFinalPoint(int mouseX, int mouseY, std::vector<std::array<int, 2>> posList, int windowWidth, int windowHeight);
-std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth, float deltaTime, Image obelBilled, std::vector<std::array<int, 2>> posList);
+std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth, int windowHeight, float deltaTime, Image obelBilled, std::vector<std::array<int, 2>> posList);
+std::vector<SDL_Rect> DrawTowerMenu(int mouseX, int mouseY, SDL_Renderer *renderer, int windowWidth, int windowHeight);
+std::vector<SDL_Rect> DrawGrid(SDL_Renderer *renderer, int width, int height, int mouseX, int mouseY, int rows, int collums, int buttons, int offset, int startX, int startY, std::vector<std::string> buttonTitles);
 
 int main(int argc, char *argv[])
 {
@@ -54,7 +56,7 @@ int main(int argc, char *argv[])
 
     Image obelBilled;
     obelBilled.init(renderer, "obelLectio.jpg");
-    obelBilled.resizeKA('w', 100, windowHeight);
+    obelBilled.resizeKA('w', 50, windowHeight);
 
     std::vector<Obel> obler { };
 
@@ -91,7 +93,7 @@ int main(int argc, char *argv[])
                 posList = ViewMenu(renderer, windowWidth, windowHeight, &running, ev, &whichUI, 5);
                 break;
             case 5:
-                obler = Play(renderer, obler, &running, &whichUI, ev, windowWidth, deltaTime, obelBilled, posList);
+                obler = Play(renderer, obler, &running, &whichUI, ev, windowWidth, windowHeight, deltaTime, obelBilled, posList);
                 break;
             default:
                 Menu(renderer, windowWidth, windowHeight, &running, ev, &whichUI, posList);
@@ -398,13 +400,16 @@ std::vector<std::array<int, 2>> ViewMenu(SDL_Renderer *renderer, int windowWidth
 
     int offset ( 40 );
     std::vector<SDL_Rect> buttons(j.size());
-    int buttonHeight { (windowHeight - offset * static_cast<int>(j.size())) / static_cast<int>(j.size()) };
-    buttons = SetButtonCoords(windowWidth, windowHeight, 350, buttonHeight, offset, buttons);
+    // int buttonHeight { (windowHeight - offset * static_cast<int>(j.size())) / static_cast<int>(j.size()) };
+    // buttons = SetButtonCoords(windowWidth, windowHeight, 350, buttonHeight, offset, buttons);
 
     std::vector<std::array<int, 2>> posList;
 
     int mouseX { };
     int mouseY { };
+
+    buttons = DrawGrid(renderer, windowWidth, windowHeight, mouseX, mouseY, 5, 5, buttons.size(), offset, 0, 0, titles);
+
     SDL_GetMouseState(&mouseX, &mouseY);
 
     while(SDL_PollEvent(&ev) != 0)
@@ -447,7 +452,8 @@ std::vector<std::array<int, 2>> ViewMenu(SDL_Renderer *renderer, int windowWidth
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
 
-    DrawMenuButtons(renderer, buttons, titles, mouseX, mouseY);
+    // DrawMenuButtons(renderer, buttons, titles, mouseX, mouseY);
+    buttons = DrawGrid(renderer, windowWidth, windowHeight, mouseX, mouseY, 5, 5, buttons.size(), offset, 0, 0, titles);
 
     SDL_RenderPresent(renderer);
 
@@ -490,8 +496,12 @@ void View(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, SDL_E
     SDL_RenderPresent(renderer);
 }
 
-std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth, float deltaTime, Image obelBilled, std::vector<std::array<int, 2>> posList)
+std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth, int windowHeight, float deltaTime, Image obelBilled, std::vector<std::array<int, 2>> posList)
 {
+    int mouseX { };
+    int mouseY { };
+    SDL_GetMouseState(&mouseX, &mouseY);
+
     while(SDL_PollEvent(&ev) != 0)
     {
         if(ev.type == SDL_QUIT)
@@ -505,6 +515,14 @@ std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *ru
                     for(int i { }; i<obler.size(); ++i)
                         obler.clear();
                     break;
+                case SDLK_SPACE:
+                    Obel temp;
+                    temp.initObel(posList, renderer);
+                    temp.billed = obelBilled;
+                    temp.speed = 100;
+                    temp.hp = 10;
+                    obler.push_back(temp);
+                    break;
             }
 
         } else if(ev.type == SDL_MOUSEBUTTONDOWN)
@@ -512,16 +530,11 @@ std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *ru
             switch(ev.button.button)
             {
                 case SDL_BUTTON_LEFT:
-                    Obel temp;
-                    temp.initObel(posList, renderer);
-                    temp.billed = obelBilled;
-                    temp.speed = 100;
-                    temp.hp = 10;
-                    obler.push_back(temp);
+                    std::cout << "left click\n";
+                    break;
             }
         }
     }
-
 
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
@@ -545,8 +558,87 @@ std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *ru
             obler[i].cleanUp();
         }
     }
+    DrawTowerMenu(mouseX, mouseY, renderer, windowWidth, windowHeight);
 
     SDL_RenderPresent(renderer);
 
     return obler;
+}
+
+std::vector<SDL_Rect> DrawTowerMenu(int mouseX, int mouseY, SDL_Renderer *renderer, int windowWidth, int windowHeight)
+{
+    std::vector<SDL_Rect> buttonList;
+
+    int width { 200 };
+    SDL_Color color { 163, 150, 137, 255 };
+
+    SDL_Rect menuRect;
+    menuRect.h = windowHeight;
+    menuRect.w = width;
+    menuRect.x = windowWidth - width;
+    menuRect.y = 0;
+
+    if(mouseX > windowWidth - width)
+    {
+        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+        SDL_RenderFillRect(renderer, &menuRect);
+        buttonList = DrawGrid(renderer, menuRect.w, menuRect.h, mouseX, mouseY, 1, 1, 1, 10, menuRect.x, 0, { "din mor" });
+    }
+
+    return buttonList;
+}
+
+std::vector<SDL_Rect> DrawGrid(SDL_Renderer *renderer, int width, int height, int mouseX, int mouseY, int rows, int collums, int buttons, int offset, int startX, int startY, std::vector<std::string> buttonTitles)
+{
+    Text buttonText;
+    buttonText.color = { 255, 255, 255 };
+    buttonText.fontSize = 40;
+    buttonText.init(renderer, "arial.ttf");
+
+    SDL_Color hover { 85, 106, 130, 255 };
+    SDL_Color standard { 66, 83, 102, 255 };
+
+    std::vector<SDL_Rect> buttonList;
+
+    int buttonHeight { (height - offset * (rows + 1)) / rows };
+    int buttonWidth { (width - offset * (rows + 1)) / collums };
+
+    int x { startX + offset };
+    int y { startY + offset };
+
+    SDL_Rect buttonRect;
+    buttonRect.h = buttonHeight;
+    buttonRect.w = buttonWidth;
+
+    for(int i { }; i<buttons; ++i)
+    {
+        buttonRect.x = x;
+        buttonRect.y = y;
+        buttonList.push_back(buttonRect);
+
+        roundedBoxRGBA(renderer, buttonRect.x - 5, buttonRect.y - 5, buttonRect.x + buttonRect.w + 5, buttonRect.y + buttonRect.h + 5, 25, 43, 53, 64, 255);
+        if(GetMouseHover(buttonRect, mouseX, mouseY))
+            roundedBoxRGBA(renderer, buttonRect.x + 5, buttonRect.y + 5, buttonRect.x + buttonRect.w - 5, buttonRect.y + buttonRect.h - 5, 25, hover.r, hover.g, hover.b, 255);
+        else
+            roundedBoxRGBA(renderer, buttonRect.x + 5, buttonRect.y + 5, buttonRect.x + buttonRect.w - 5, buttonRect.y + buttonRect.h - 5, 25, standard.r, standard.g, standard.b, 255);
+
+        buttonText.textString = buttonTitles[i];
+        buttonText.updateSize(renderer);
+        buttonText.x = buttonRect.x + (buttonRect.w / 2 - buttonText.w / 2);
+        buttonText.y = buttonRect.y + (buttonRect.h / 2 - buttonText.h / 2);
+        buttonText.draw(renderer);
+
+        if((i + 1) % collums == 0)
+        {
+            y += buttonHeight + offset;
+            x = startX + offset;
+        } else
+        {
+            x += buttonWidth + offset;
+        }
+    }
+
+    buttonText.destroyFont();
+
+    return buttonList;
 }

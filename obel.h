@@ -26,7 +26,7 @@ class Obel
         {
             hpText.updateSize(renderer);
             hpText.x = billed.x + (billed.w / 2 - hpText.w / 2);
-            hpText.y = billed.y - 50;
+            hpText.y = billed.y - 20;
             hpText.textString = std::to_string(static_cast<int>(std::round(hp)));
             hpText.draw(renderer);
 
@@ -63,8 +63,8 @@ class Obel
             y = posList[0][1];
 
             Text text;
-            text.color = { 0, 0, 0 };
-            text.fontSize = 50;
+            text.color = { 255, 0, 0 };
+            text.fontSize = 20;
             text.init(renderer, "arial.ttf");
             hpText = text;
         }
