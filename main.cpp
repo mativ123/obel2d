@@ -39,7 +39,7 @@ std::vector<SDL_Rect> DrawGrid(SDL_Renderer *renderer, int width, int height, in
 namespace obj
 {
     std::vector<Obel> obler { };
-    std::vector>
+    std::vector<ObelTower>
 }
 
 int main(int argc, char *argv[])
