@@ -16,6 +16,7 @@
 #include "../common/fonts.h"
 #include "json.hpp"
 #include "obel.h"
+#include "towers.h"
 
 using json = nlohmann::json;
 
@@ -31,9 +32,15 @@ std::vector<SDL_Rect> SetButtonCoords(int windowWidth, int windowHeight, int but
 std::vector<std::array<int, 2>> ViewMenu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI, int nextWindow);
 void View(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, SDL_Event ev, bool *running, int *whichUI);
 std::vector<std::array<int, 2>> AddFinalPoint(int mouseX, int mouseY, std::vector<std::array<int, 2>> posList, int windowWidth, int windowHeight);
-std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth, int windowHeight, float deltaTime, Image obelBilled, std::vector<std::array<int, 2>> posList);
+void Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth, int windowHeight, float deltaTime, Image obelBilled, std::vector<std::array<int, 2>> posList);
 std::vector<SDL_Rect> DrawTowerMenu(int mouseX, int mouseY, SDL_Renderer *renderer, int windowWidth, int windowHeight);
 std::vector<SDL_Rect> DrawGrid(SDL_Renderer *renderer, int width, int height, int mouseX, int mouseY, int rows, int collums, int buttons, int offset, int startX, int startY, std::vector<std::string> buttonTitles);
+
+namespace obj
+{
+    std::vector<Obel> obler { };
+    std::vector>
+}
 
 int main(int argc, char *argv[])
 {
@@ -58,7 +65,6 @@ int main(int argc, char *argv[])
     obelBilled.init(renderer, "obelLectio.jpg");
     obelBilled.resizeKA('w', 50, windowHeight);
 
-    std::vector<Obel> obler { };
 
     std::vector<std::array<int, 2>> posList;
 
@@ -496,11 +502,20 @@ void View(SDL_Renderer *renderer, std::vector<std::array<int, 2>> posList, SDL_E
     SDL_RenderPresent(renderer);
 }
 
-std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth, int windowHeight, float deltaTime, Image obelBilled, std::vector<std::array<int, 2>> posList)
+void Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *running, int *whichUI, SDL_Event ev, int windowWidth, int windowHeight, float deltaTime, Image obelBilled, std::vector<std::array<int, 2>> posList)
 {
     int mouseX { };
     int mouseY { };
     SDL_GetMouseState(&mouseX, &mouseY);
+
+    std::vector<SDL_Rect> buttons;
+    static bool isBuilding { };
+    int whichBuilding { };
+    ObelTower victor;
+    victor.billed = obelBilled;
+    victor.dps = 1;
+
+    buttons = DrawTowerMenu(mouseX, mouseY, renderer, windowWidth, windowHeight);
 
     while(SDL_PollEvent(&ev) != 0)
     {
@@ -530,7 +545,14 @@ std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *ru
             switch(ev.button.button)
             {
                 case SDL_BUTTON_LEFT:
-                    std::cout << "left click\n";
+                    if(GetMouseHover(buttons[0], mouseX, mouseY))
+                    {
+                        whichBuilding = 0;
+                        isBuilding = !isBuilding;
+                    } else
+                    {
+                        isBuilding
+                    }
                     break;
             }
         }
@@ -558,11 +580,17 @@ std::vector<Obel> Play(SDL_Renderer *renderer, std::vector<Obel> obler, bool *ru
             obler[i].cleanUp();
         }
     }
-    DrawTowerMenu(mouseX, mouseY, renderer, windowWidth, windowHeight);
+
+    buttons = DrawTowerMenu(mouseX, mouseY, renderer, windowWidth, windowHeight);
+
+    if(isBuilding)
+    {
+        victor.billed.x = mouseX;
+        victor.billed.y = mouseY;
+        victor.draw(renderer);
+    }
 
     SDL_RenderPresent(renderer);
-
-    return obler;
 }
 
 std::vector<SDL_Rect> DrawTowerMenu(int mouseX, int mouseY, SDL_Renderer *renderer, int windowWidth, int windowHeight)
