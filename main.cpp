@@ -32,7 +32,7 @@ std::vector<SDL_Rect> SetButtonCoords(int windowWidth, int windowHeight, int but
 void ViewMenu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI, int nextWindow);
 void View(SDL_Renderer *renderer, SDL_Event ev, bool *running, int *whichUI);
 void AddFinalPoint(int mouseX, int mouseY, int windowWidth, int windowHeight);
-void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int windowWidth, int windowHeight, float deltaTime, Image obelBilled);
+void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int windowWidth, int windowHeight, float deltaTime, Image obelBilled, Image victorBilled);
 std::vector<SDL_Rect> DrawTowerMenu(int mouseX, int mouseY, SDL_Renderer *renderer, int windowWidth, int windowHeight);
 std::vector<SDL_Rect> DrawGrid(SDL_Renderer *renderer, int width, int height, int mouseX, int mouseY, int rows, int collums, int buttons, int offset, int startX, int startY, std::vector<std::string> buttonTitles);
 
@@ -66,6 +66,10 @@ int main(int argc, char *argv[])
     obelBilled.init(renderer, "obelLectio.jpg");
     obelBilled.resizeKA('w', 50, windowHeight);
 
+    Image victorBilled;
+    victorBilled.init(renderer, "victor.jpg");
+    victorBilled.resizeKA('w', 50, windowHeight);
+
     SDL_Event ev;
     bool running { true };
 
@@ -81,24 +85,31 @@ int main(int argc, char *argv[])
         switch(whichUI)
         {
             case 0:
+                SDL_SetWindowSize(window, windowHeight, windowHeight);
                 Menu(renderer, windowWidth, windowHeight, &running, ev, &whichUI);
                 break;
             case 1:
+                SDL_SetWindowSize(window, windowHeight, windowHeight);
                 Creating(renderer, windowWidth, windowHeight, &running, ev, &whichUI);
                 break;
             case 2:
+                SDL_SetWindowSize(window, windowHeight, windowHeight);
                 ViewMenu(renderer, windowWidth, windowHeight, &running, ev, &whichUI, 3);
                 break;
             case 3:
+                SDL_SetWindowSize(window, windowHeight, windowHeight);
                 View(renderer, ev, &running, &whichUI);
                 break;
             case 4:
+                SDL_SetWindowSize(window, windowHeight, windowHeight);
                 ViewMenu(renderer, windowWidth, windowHeight, &running, ev, &whichUI, 5);
                 break;
             case 5:
-                Play(renderer, &running, &whichUI, ev, windowWidth, windowHeight, deltaTime, obelBilled);
+                SDL_SetWindowSize(window, windowHeight + 200, windowHeight);
+                Play(renderer, &running, &whichUI, ev, windowWidth, windowHeight, deltaTime, obelBilled, victorBilled);
                 break;
             default:
+                SDL_SetWindowSize(window, windowHeight, windowHeight);
                 Menu(renderer, windowWidth, windowHeight, &running, ev, &whichUI);
                 break;
         }
@@ -111,6 +122,7 @@ int main(int argc, char *argv[])
     renderer = nullptr;
 
     obelBilled.destroyTexture();
+    victorBilled.destroyTexture();
 
     SDL_Quit();
     IMG_Quit();
@@ -489,7 +501,7 @@ void View(SDL_Renderer *renderer, SDL_Event ev, bool *running, int *whichUI)
     SDL_RenderPresent(renderer);
 }
 
-void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int windowWidth, int windowHeight, float deltaTime, Image obelBilled)
+void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int windowWidth, int windowHeight, float deltaTime, Image obelBilled, Image victorBilled)
 {
     int mouseX { };
     int mouseY { };
@@ -498,9 +510,6 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
     std::vector<SDL_Rect> buttons;
     static bool isBuilding { };
     int whichBuilding { };
-    ObelTower victor;
-    victor.billed = obelBilled;
-    victor.dps = 1;
 
     buttons = DrawTowerMenu(mouseX, mouseY, renderer, windowWidth, windowHeight);
 
@@ -516,6 +525,8 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
                     *whichUI = 4;
                     for(int i { }; i<obj::obler.size(); ++i)
                         obj::obler.clear();
+                    obj::towers.clear();
+                    isBuilding = false;
                     break;
                 case SDLK_SPACE:
                     Obel temp;
@@ -532,10 +543,23 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
             switch(ev.button.button)
             {
                 case SDL_BUTTON_LEFT:
-                    if(GetMouseHover(buttons[0], mouseX, mouseY))
+                    if(GetMouseHover(buttons[0], mouseX, mouseY) && !isBuilding)
                     {
-                        whichBuilding = 0;
-                        isBuilding = !isBuilding;
+                        isBuilding = true;
+                        ObelTower temp;
+                        temp.billed = victorBilled;
+                        temp.dps = 1;
+                        obj::towers.push_back(temp);
+                    } else if(GetMouseHover(buttons[1], mouseX, mouseY) && !isBuilding)
+                    {
+                        isBuilding = true;
+                        ObelTower temp;
+                        temp.billed = victorBilled;
+                        temp.dps = 10;
+                        obj::towers.push_back(temp);
+                    } else
+                    {
+                        isBuilding = false;
                     }
                     break;
             }
@@ -560,18 +584,29 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
 
         if(obj::obler[i].reachedPoint == obj::posList.size() - 1 || obj::obler[i].hp <= 0)
         {
-            obj::obler.erase(obj::obler.begin() + i);
             obj::obler[i].cleanUp();
+            obj::obler.erase(obj::obler.begin() + i);
         }
     }
 
     buttons = DrawTowerMenu(mouseX, mouseY, renderer, windowWidth, windowHeight);
-
     if(isBuilding)
     {
-        victor.billed.x = mouseX;
-        victor.billed.y = mouseY;
-        victor.draw(renderer);
+        for(int i { }; i<obj::towers.size() - 1; ++i)
+        {
+            obj::towers[i].draw(renderer);
+            obj::obler = obj::towers[i].skyd(obj::obler, deltaTime);
+        }
+        obj::towers[obj::towers.size() - 1].billed.x = mouseX;
+        obj::towers[obj::towers.size() - 1].billed.y = mouseY;
+        obj::towers[obj::towers.size() - 1].draw(renderer);
+    } else
+    {
+        for(int i { }; i<obj::towers.size(); ++i)
+        {
+            obj::towers[i].draw(renderer);
+            obj::obler = obj::towers[i].skyd(obj::obler, deltaTime);
+        }
     }
 
     SDL_RenderPresent(renderer);
@@ -587,15 +622,12 @@ std::vector<SDL_Rect> DrawTowerMenu(int mouseX, int mouseY, SDL_Renderer *render
     SDL_Rect menuRect;
     menuRect.h = windowHeight;
     menuRect.w = width;
-    menuRect.x = windowWidth - width;
+    menuRect.x = windowWidth;
     menuRect.y = 0;
 
-    if(mouseX > windowWidth - width)
-    {
-        SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
-        SDL_RenderFillRect(renderer, &menuRect);
-        buttonList = DrawGrid(renderer, menuRect.w, menuRect.h, mouseX, mouseY, 1, 1, 1, 10, menuRect.x, 0, { "din mor" });
-    }
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    SDL_RenderFillRect(renderer, &menuRect);
+    buttonList = DrawGrid(renderer, menuRect.w, menuRect.h, mouseX, mouseY, 2, 1, 2, 40, menuRect.x, 0, { "1 dps", "10 dps" });
 
     return buttonList;
 }
@@ -613,7 +645,7 @@ std::vector<SDL_Rect> DrawGrid(SDL_Renderer *renderer, int width, int height, in
     std::vector<SDL_Rect> buttonList;
 
     int buttonHeight { (height - offset * (rows + 1)) / rows };
-    int buttonWidth { (width - offset * (rows + 1)) / collums };
+    int buttonWidth { (width - offset * (collums + 1)) / collums };
 
     int x { startX + offset };
     int y { startY + offset };

@@ -4,9 +4,12 @@ class ObelTower
         Image billed;
         int dps { };
 
-        void skyd(std::vector<Obel> obler, float deltaTime)
+        std::vector<Obel> skyd(std::vector<Obel> obler, float deltaTime)
         {
-            obler[obler.size() - 1].hp -= dps * deltaTime;
+            if(obler.size() > 0)
+                obler[0].hp -= dps * deltaTime;
+
+            return obler;
         }
 
         void draw(SDL_Renderer *renderer)
