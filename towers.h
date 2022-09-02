@@ -3,6 +3,8 @@ class ObelTower
     public:
         Image billed;
         int dps { };
+        float moneyPower;
+        int type { };
 
         std::vector<Obel> skyd(std::vector<Obel> obler, float deltaTime)
         {
@@ -10,6 +12,14 @@ class ObelTower
                 obler[0].hp -= dps * deltaTime;
 
             return obler;
+        }
+
+        int moneyPlus(float money, float deltaTime)
+        {
+            money += moneyPower * deltaTime;
+            std::cout << money << '\n';
+
+            return money;
         }
 
         void draw(SDL_Renderer *renderer)

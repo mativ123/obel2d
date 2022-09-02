@@ -32,7 +32,7 @@ std::vector<SDL_Rect> SetButtonCoords(int windowWidth, int windowHeight, int but
 void ViewMenu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI, int nextWindow);
 void View(SDL_Renderer *renderer, SDL_Event ev, bool *running, int *whichUI);
 void AddFinalPoint(int mouseX, int mouseY, int windowWidth, int windowHeight);
-void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int windowWidth, int windowHeight, float deltaTime, Image obelBilled, Image victorBilled);
+void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int windowWidth, int windowHeight, float deltaTime);
 std::vector<SDL_Rect> DrawTowerMenu(int mouseX, int mouseY, SDL_Renderer *renderer, int windowWidth, int windowHeight);
 std::vector<SDL_Rect> DrawGrid(SDL_Renderer *renderer, int width, int height, int mouseX, int mouseY, int rows, int collums, int buttons, int offset, int startX, int startY, std::vector<std::string> buttonTitles);
 
@@ -41,6 +41,15 @@ namespace obj
     std::vector<Obel> obler { };
     std::vector<ObelTower> towers;
     std::vector<std::array<int, 2>> posList;
+}
+
+namespace  img
+{
+    Image obelBilled;
+
+    Image victorBilled;
+
+    Image williamBilled;
 }
 
 int main(int argc, char *argv[])
@@ -62,13 +71,12 @@ int main(int argc, char *argv[])
     IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
     TTF_Init();
 
-    Image obelBilled;
-    obelBilled.init(renderer, "obelLectio.jpg");
-    obelBilled.resizeKA('w', 50, windowHeight);
-
-    Image victorBilled;
-    victorBilled.init(renderer, "victor.jpg");
-    victorBilled.resizeKA('w', 50, windowHeight);
+    img::obelBilled.init(renderer, "obelLectio.jpg");
+    img::obelBilled.resizeKA('w', 50, windowHeight);
+    img::victorBilled.init(renderer, "victor.jpg");
+    img::victorBilled.resizeKA('w', 50, windowHeight);
+    img::williamBilled.init(renderer, "william.jpg");
+    img::williamBilled.resizeKA('w', 50, windowHeight);
 
     SDL_Event ev;
     bool running { true };
@@ -105,8 +113,8 @@ int main(int argc, char *argv[])
                 ViewMenu(renderer, windowWidth, windowHeight, &running, ev, &whichUI, 5);
                 break;
             case 5:
-                SDL_SetWindowSize(window, windowHeight + 200, windowHeight);
-                Play(renderer, &running, &whichUI, ev, windowWidth, windowHeight, deltaTime, obelBilled, victorBilled);
+                SDL_SetWindowSize(window, windowHeight + 400, windowHeight);
+                Play(renderer, &running, &whichUI, ev, windowWidth, windowHeight, deltaTime);
                 break;
             default:
                 SDL_SetWindowSize(window, windowHeight, windowHeight);
@@ -121,8 +129,9 @@ int main(int argc, char *argv[])
     window = nullptr;
     renderer = nullptr;
 
-    obelBilled.destroyTexture();
-    victorBilled.destroyTexture();
+    img::obelBilled.destroyTexture();
+    img::victorBilled.destroyTexture();
+    img::williamBilled.destroyTexture();
 
     SDL_Quit();
     IMG_Quit();
@@ -501,7 +510,7 @@ void View(SDL_Renderer *renderer, SDL_Event ev, bool *running, int *whichUI)
     SDL_RenderPresent(renderer);
 }
 
-void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int windowWidth, int windowHeight, float deltaTime, Image obelBilled, Image victorBilled)
+void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int windowWidth, int windowHeight, float deltaTime)
 {
     int mouseX { };
     int mouseY { };
@@ -510,6 +519,18 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
     std::vector<SDL_Rect> buttons;
     static bool isBuilding { };
     int whichBuilding { };
+
+    static float money { 200 };
+
+    Text moneyFont;
+    moneyFont.color = { 0, 0, 0, 255 };
+    moneyFont.fontSize = 50;
+    moneyFont.init(renderer, "arial.ttf");
+    moneyFont.x = moneyFont.y = 0;
+    moneyFont.textString = std::to_string(static_cast<int>(std::round(money)));
+    moneyFont.updateSize(renderer);
+    moneyFont.x = windowWidth - moneyFont.w;
+    moneyFont.y = 0;
 
     buttons = DrawTowerMenu(mouseX, mouseY, renderer, windowWidth, windowHeight);
 
@@ -527,11 +548,12 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
                         obj::obler.clear();
                     obj::towers.clear();
                     isBuilding = false;
+                    money = 10;
                     break;
                 case SDLK_SPACE:
                     Obel temp;
                     temp.initObel(obj::posList, renderer);
-                    temp.billed = obelBilled;
+                    temp.billed = img::obelBilled;
                     temp.speed = 100;
                     temp.hp = 10;
                     obj::obler.push_back(temp);
@@ -543,20 +565,51 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
             switch(ev.button.button)
             {
                 case SDL_BUTTON_LEFT:
-                    if(GetMouseHover(buttons[0], mouseX, mouseY) && !isBuilding)
+                    if(GetMouseHover(buttons[0], mouseX, mouseY) && !isBuilding && money >= 10)
                     {
                         isBuilding = true;
                         ObelTower temp;
-                        temp.billed = victorBilled;
+                        temp.billed = img::victorBilled;
                         temp.dps = 1;
+                        temp.type = 0;
                         obj::towers.push_back(temp);
-                    } else if(GetMouseHover(buttons[1], mouseX, mouseY) && !isBuilding)
+                        money -= 10;
+                    } else if(GetMouseHover(buttons[1], mouseX, mouseY) && !isBuilding && money >= 20)
                     {
                         isBuilding = true;
                         ObelTower temp;
-                        temp.billed = victorBilled;
-                        temp.dps = 10;
+                        temp.billed = img::victorBilled;
+                        temp.dps = 5;
+                        temp.type = 0;
                         obj::towers.push_back(temp);
+                        money -= 20;
+                    } else if(GetMouseHover(buttons[2], mouseX, mouseY) && !isBuilding && money >= 50)
+                    {
+                        isBuilding = true;
+                        ObelTower temp;
+                        temp.billed = img::victorBilled;
+                        temp.dps = 10;
+                        temp.type = 0;
+                        obj::towers.push_back(temp);
+                        money -= 50;
+                    } else if(GetMouseHover(buttons[3], mouseX, mouseY) && !isBuilding && money >= 100)
+                    {
+                        isBuilding = true;
+                        ObelTower temp;
+                        temp.billed = img::victorBilled;
+                        temp.dps = 25;
+                        temp.type = 0;
+                        obj::towers.push_back(temp);
+                        money -= 100;
+                    } else if(GetMouseHover(buttons[4], mouseX, mouseY) && !isBuilding && money >= 200)
+                    {
+                        isBuilding = true;
+                        ObelTower temp;
+                        temp.billed = img::williamBilled;
+                        temp.type = 1;
+                        temp.moneyPower = 15;
+                        obj::towers.push_back(temp);
+                        money -= 200;
                     } else
                     {
                         isBuilding = false;
@@ -582,10 +635,15 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
 
         obj::obler[i].drawObel(renderer);
 
-        if(obj::obler[i].reachedPoint == obj::posList.size() - 1 || obj::obler[i].hp <= 0)
+        if(obj::obler[i].reachedPoint == obj::posList.size() - 1)
         {
             obj::obler[i].cleanUp();
             obj::obler.erase(obj::obler.begin() + i);
+        } else if(obj::obler[i].hp <= 0)
+        {
+            obj::obler[i].cleanUp();
+            obj::obler.erase(obj::obler.begin() + i);
+            money += 5;
         }
     }
 
@@ -605,18 +663,26 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
         for(int i { }; i<obj::towers.size(); ++i)
         {
             obj::towers[i].draw(renderer);
-            obj::obler = obj::towers[i].skyd(obj::obler, deltaTime);
+            if(obj::towers[i].type == 0)
+                obj::obler = obj::towers[i].skyd(obj::obler, deltaTime);
+            else if(obj::towers[i].type == 1)
+                money = obj::towers[i].moneyPlus(money, deltaTime);
         }
     }
 
+    moneyFont.textString = std::to_string(static_cast<int>(std::round(money)));
+    moneyFont.draw(renderer);
+
     SDL_RenderPresent(renderer);
+
+    moneyFont.destroyFont();
 }
 
 std::vector<SDL_Rect> DrawTowerMenu(int mouseX, int mouseY, SDL_Renderer *renderer, int windowWidth, int windowHeight)
 {
     std::vector<SDL_Rect> buttonList;
 
-    int width { 200 };
+    int width { 400 };
     SDL_Color color { 163, 150, 137, 255 };
 
     SDL_Rect menuRect;
@@ -627,7 +693,7 @@ std::vector<SDL_Rect> DrawTowerMenu(int mouseX, int mouseY, SDL_Renderer *render
 
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
     SDL_RenderFillRect(renderer, &menuRect);
-    buttonList = DrawGrid(renderer, menuRect.w, menuRect.h, mouseX, mouseY, 2, 1, 2, 40, menuRect.x, 0, { "1 dps", "10 dps" });
+    buttonList = DrawGrid(renderer, menuRect.w, menuRect.h, mouseX, mouseY, 3, 2, 5, 20, menuRect.x, 0, { "1 dps", "5 dps", "10 dps", "25 dps", "10 mps" });
 
     return buttonList;
 }
