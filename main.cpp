@@ -521,6 +521,7 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
     int whichBuilding { };
 
     static float money { 200 };
+    static float hp { 100 };
 
     Text moneyFont;
     moneyFont.color = { 0, 0, 0, 255 };
@@ -610,8 +611,16 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
                         temp.moneyPower = 15;
                         obj::towers.push_back(temp);
                         money -= 200;
-                    } else
+                    } else if(mouseX < windowWidth)
                     {
+                        isBuilding = false;
+                    }
+                    break;
+
+                case SDL_BUTTON_RIGHT:
+                    if(isBuilding)
+                    {
+                        obj::towers.pop_back();
                         isBuilding = false;
                     }
                     break;
@@ -653,7 +662,10 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
         for(int i { }; i<obj::towers.size() - 1; ++i)
         {
             obj::towers[i].draw(renderer);
-            obj::obler = obj::towers[i].skyd(obj::obler, deltaTime);
+            if(obj::towers[i].type == 0)
+                obj::obler = obj::towers[i].skyd(obj::obler, deltaTime);
+            else if(obj::towers[i].type == 1)
+                money = obj::towers[i].moneyPlus(money, deltaTime);
         }
         obj::towers[obj::towers.size() - 1].billed.x = mouseX;
         obj::towers[obj::towers.size() - 1].billed.y = mouseY;

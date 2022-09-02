@@ -14,10 +14,9 @@ class ObelTower
             return obler;
         }
 
-        int moneyPlus(float money, float deltaTime)
+        float moneyPlus(float money, float deltaTime)
         {
             money += moneyPower * deltaTime;
-            std::cout << money << '\n';
 
             return money;
         }
