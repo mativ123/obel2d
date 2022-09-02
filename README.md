@@ -36,11 +36,17 @@ And I will never forget him
 * sdl2_gfx
 * g++ (or any other c++ compiler)
 
-arch: `pacman -S sdl2 sdl2_image sdl2_ttf sdl2_gfx gcc`
+arch:
+```
+pacman -S sdl2 sdl2_image sdl2_ttf sdl2_gfx gcc
+```
 
 Clone the source code and build:
 
-`g++ main.cpp --std=c++20 -lSDL2 -lSDL2_ttf -lSDL2_gfx -lSDL2_image -o main`
+```
+g++ main.cpp --std=c++20 -lSDL2 -lSDL2_ttf -lSDL2_gfx -lSDL2_image -o main
+```
+
 ### windows
 Download the latest release from [the releases page](https://github.com/mativ123/obel2d/releases).
 
