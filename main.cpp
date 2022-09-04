@@ -19,20 +19,35 @@
 
 using json = nlohmann::json;
 
+// pushing a position where user clicked into poslist for creating maps
 void Funktion1(int mouseX, int mouseY, int windowWidth, int windowHeight);
+// draw poslist pos to screen for when creating
 void DrawLines(SDL_Renderer *renderer, int mouseX, int  mouseY, int windowWidth, int windowHeight);
+// save poslist to a json file
 void SaveToJSON();
+// load pos list from json file
 std::ifstream LoadJSON();
+// menu for creating maps
 void Creating(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI);
+// main menu
 void Menu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI);
+// drawing manin menu buttons in a vertical list
 void DrawMenuButtons(SDL_Renderer *renderer, std::vector<SDL_Rect> buttons, std::vector<std::string> buttonTitles, int mouseX, int mouseY);
+// check if mouse is hovering over rect
 bool GetMouseHover(SDL_Rect button, int mouseX, int mouseY);
+// sets the main menu button dimensiosn
 std::vector<SDL_Rect> SetButtonCoords(int windowWidth, int windowHeight, int buttonWidth, int buttonHeight, int offset, std::vector<SDL_Rect> buttons);
+// select which map to view/play
 void ViewMenu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *running, SDL_Event ev, int *whichUI, int nextWindow);
+// view maps
 void View(SDL_Renderer *renderer, SDL_Event ev, bool *running, int *whichUI);
+// add the final point before saving when creating maps
 void AddFinalPoint(int mouseX, int mouseY, int windowWidth, int windowHeight);
+// play a map
 void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int windowWidth, int windowHeight, float deltaTime);
+// draw menu from where users can select towers to build
 std::vector<SDL_Rect> DrawTowerMenu(int mouseX, int mouseY, SDL_Renderer *renderer, int windowWidth, int windowHeight);
+// draw grid of buttons
 std::vector<SDL_Rect> DrawGrid(SDL_Renderer *renderer, int width, int height, int mouseX, int mouseY, int rows, int collums, int buttons, int offset, int startX, int startY, std::vector<std::string> buttonTitles);
 
 int main(int argc, char *argv[])
@@ -54,6 +69,7 @@ int main(int argc, char *argv[])
     IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
     TTF_Init();
 
+    // pictures for towers and such
     img::obelBilled.init(renderer, "obelLectio.jpg");
     img::obelBilled.resizeKA('w', 50, windowHeight);
     img::victorBilled.init(renderer, "victor.jpg");
@@ -61,6 +77,7 @@ int main(int argc, char *argv[])
     img::williamBilled.init(renderer, "william.jpg");
     img::williamBilled.resizeKA('w', 50, windowHeight);
 
+    // fonts so they dont get recreated every loop
     font::statFont.color = { 0, 0, 0, 255 };
     font::statFont.fontSize = 50;
     font::statFont.init(renderer, "arial.ttf");
@@ -76,7 +93,7 @@ int main(int argc, char *argv[])
     SDL_Event ev;
     bool running { true };
 
-    // 0 = menu, 1 = creating, 2 = viewing menu, 3 = viewing, 4 = Play
+    // int for managin which ui to be shown
     int whichUI { 0 };
 
     while(running)
@@ -85,6 +102,7 @@ int main(int argc, char *argv[])
         currentTime = SDL_GetTicks();
         deltaTime = (currentTime - prevTime) / 1000.0f;
 
+        // switch statement for showing diferent menus
         switch(whichUI)
         {
             case 0:
@@ -118,6 +136,7 @@ int main(int argc, char *argv[])
         }
     }
 
+    // clean up
     SDL_DestroyWindow(window);
     SDL_DestroyRenderer(renderer);
 
@@ -141,22 +160,27 @@ int main(int argc, char *argv[])
 
 void Funktion1(int mouseX, int mouseY, int windowWidth, int windowHeight)
 {
+    // set first point at the edge to the right if mouse is closest to there
     if(obj::posList.size() == 0 && mouseX < windowWidth / 2 && mouseY < windowHeight - (windowHeight / 4) && mouseY > windowHeight / 4)
     {
         std::array<int, 2> temp { 0, mouseY };
         obj::posList.push_back(temp);
+    // set first point at the edge to the left if mouse is closest to there
     }else if(obj::posList.size() == 0 && mouseX > windowWidth / 2 && mouseY < windowHeight - (windowHeight / 4) && mouseY > windowHeight / 4)
     {
         std::array<int, 2> temp { windowWidth, mouseY };
         obj::posList.push_back(temp);
+    // set first point at the edge to the bottom if mouse is closest to there
     } else if(obj::posList.size() == 0 && mouseY > windowHeight - (windowHeight / 4))
     {
         std::array<int, 2> temp { mouseX, windowHeight};
         obj::posList.push_back(temp);
+    // set first point at the edge to the top if mouse is closest to there
     } else if(obj::posList.size() == 0 && mouseY < windowHeight / 4)
     {
         std::array<int, 2> temp { mouseX, 0};
         obj::posList.push_back(temp);
+    // if it isnt the first point just set point where user is clicking
     } else
     {
         std::array<int, 2> temp { mouseX, mouseY };
@@ -166,6 +190,7 @@ void Funktion1(int mouseX, int mouseY, int windowWidth, int windowHeight)
 
 void DrawLines(SDL_Renderer *renderer, int mouseX, int  mouseY, int windowWidth, int windowHeight)
 {
+    // same deal as funktion1 but draws a line from the edge to the mouse
     if(obj::posList.size() == 0 && mouseX < windowWidth / 2 && mouseY < windowHeight - (windowHeight / 4) && mouseY > windowHeight / 4)
         thickLineRGBA(renderer, 0, mouseY, mouseX, mouseY, 10, 0, 0, 0, 255);
     else if(obj::posList.size() == 0 && mouseX > windowWidth / 2 && mouseY < windowHeight - (windowHeight / 4) && mouseY > windowHeight / 4)
@@ -174,6 +199,7 @@ void DrawLines(SDL_Renderer *renderer, int mouseX, int  mouseY, int windowWidth,
         thickLineRGBA(renderer, mouseX, windowHeight, mouseX, mouseY, 10, 0, 0, 0, 255);
     else if(obj::posList.size() == 0 && mouseY < windowHeight / 4)
         thickLineRGBA(renderer, mouseX, 0, mouseX, mouseY, 10, 0, 0, 0, 255);
+    // if there is more then or equal to two points draw a line from point to point to mouse pos
     else if(obj::posList.size() >= 2)
     {
         for(int i { }; i<obj::posList.size(); ++i)
@@ -182,6 +208,7 @@ void DrawLines(SDL_Renderer *renderer, int mouseX, int  mouseY, int windowWidth,
                 thickLineRGBA(renderer, obj::posList[i][0], obj::posList[i][1], obj::posList[i + 1][0], obj::posList[i + 1][1], 10, 0, 0, 0, 255);
         }
         thickLineRGBA(renderer, obj::posList.back()[0], obj::posList.back()[1], mouseX, mouseY, 10, 0, 0, 0, 255);
+    // if there is more then 0 points draw from first point to mouse pos
     } else if(obj::posList.size() > 0)
         thickLineRGBA(renderer, obj::posList[0][0], obj::posList[0][1], mouseX, mouseY, 10, 0, 0, 0, 255);
 }
@@ -189,14 +216,17 @@ void DrawLines(SDL_Renderer *renderer, int mouseX, int  mouseY, int windowWidth,
 void SaveToJSON()
 {
     json j;
+    // check if map.json exist and if it doesnt create it
     if(std::filesystem::exists("map.json"))
     {
         std::ifstream file("map.json");
         file >> j;
     }
 
+    // create a int for next posLists name
     int num { static_cast<int>(j.size()) + 1 };
 
+    // push curent poslist to map.json
     json j_vec(obj::posList);
     j[std::to_string(num)] = j_vec;
 
@@ -225,6 +255,7 @@ void Creating(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *r
         {
             switch(ev.button.button)
             {
+                // when clicking add point (look at funktion1)
                 case SDL_BUTTON_LEFT:
                     Funktion1(mouseX, mouseY, windowWidth, windowHeight);
                     break;
@@ -233,23 +264,20 @@ void Creating(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *r
         {
             switch(ev.key.keysym.sym)
             {
+                // add final point at the oppisite site of first point when (s)aving
                 case SDLK_s:
                     AddFinalPoint(mouseX, mouseY, windowWidth, windowHeight);
                     SaveToJSON();
                     *whichUI = 0;
                     break;
+                // (r)eset poslist
                 case SDLK_r:
                     obj::posList.clear();
                     break;
+                // removes last point in poslist (works like an undo button)
                 case SDLK_z:
                     if(obj::posList.size() > 0)
                         obj::posList.pop_back();
-                    break;
-                case SDLK_PLUS:
-                    *whichUI += 1;
-                    break;
-                case SDLK_MINUS:
-                    *whichUI -= 1;
                     break;
                 case SDLK_ESCAPE:
                     *whichUI = 0;
@@ -269,19 +297,25 @@ void Creating(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *r
 
 void AddFinalPoint(int mouseX, int mouseY, int windowWidth, int windowHeight)
 {
+    // check where first point is and set oppisite
+    
+    // first point is at right most edge
     if(obj::posList[0][0] == 0)
     {
         std::array<int, 2> temp { windowWidth, obj::posList[obj::posList.size() - 1][1] };
         obj::posList.push_back(temp);
+    // first point is at left most edge
     } else if(obj::posList[0][0] == windowWidth)
     {
         std::array<int, 2> temp { 0, obj::posList[obj::posList.size() - 1][1] };
         obj::posList.push_back(temp);
+    // first point is at top
     } else if(obj::posList[0][1] == 0)
     {
         std::array<int, 2> temp { obj::posList[obj::posList.size() - 1][0], windowWidth };
         obj::posList.push_back(temp);
-    } else if(obj::posList[0][1] == windowWidth)
+    // first point is at bottom
+    } else if(obj::posList[0][1] == windowHeight)
     {
         std::array<int, 2> temp { obj::posList[obj::posList.size() - 1][0], 0  };
         obj::posList.push_back(temp);
@@ -294,10 +328,12 @@ void Menu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *runni
     int mouseY { };
     SDL_GetMouseState(&mouseX, &mouseY);
 
+    // dimensions of menu buttons
     int buttonWidth { 350 };
     int buttonHeight { 80 };
     int offset { 30 };
 
+    // amount of buttons to be drawn
     std::vector<SDL_Rect> buttons(4);
 
     json j;
@@ -312,24 +348,11 @@ void Menu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *runni
     {
         if(ev.type == SDL_QUIT)
             *running = false;
-        else if(ev.type == SDL_KEYDOWN)
-        {
-            switch(ev.key.keysym.sym)
-            {
-                case SDLK_PLUS:
-                    *whichUI += 1;
-                    break;
-                case SDLK_MINUS:
-                    *whichUI -= 1;
-                    break;
-                case SDLK_ESCAPE:
-                    *running = false;
-                    break;
-            }
-        } else if(ev.type == SDL_MOUSEBUTTONDOWN)
+        else if(ev.type == SDL_MOUSEBUTTONDOWN)
         {
             switch(ev.button.button)
             {
+                // click on button and go to that menu
                 case SDL_BUTTON_LEFT:
                     if(GetMouseHover(buttons[0], mouseX, mouseY))
                         *whichUI = 4;
@@ -357,17 +380,19 @@ void DrawMenuButtons(SDL_Renderer *renderer, std::vector<SDL_Rect> buttons, std:
     SDL_Color hover { 85, 106, 130, 255 };
     SDL_Color standard { 66, 83, 102, 255 };
 
-
     SDL_Rect textRect;
 
     for(int i { }; i<buttons.size(); ++i)
     {
+        // draw outline
         roundedBoxRGBA(renderer, buttons[i].x - 5, buttons[i].y - 5, buttons[i].x + buttons[i].w + 5, buttons[i].y + buttons[i].h + 5, 25, 43, 53, 64, 255);
+        // draw button with correct color considering hovering
         if(GetMouseHover(buttons[i], mouseX, mouseY))
             roundedBoxRGBA(renderer, buttons[i].x + 5, buttons[i].y + 5, buttons[i].x + buttons[i].w - 5, buttons[i].y + buttons[i].h - 5, 15, hover.r, hover.g, hover.b, hover.a);
         else
             roundedBoxRGBA(renderer, buttons[i].x + 5, buttons[i].y + 5, buttons[i].x + buttons[i].w - 5, buttons[i].y + buttons[i].h - 5, 15, standard.r, standard.g, standard.b, standard.a);
 
+        // draw text and set dimensions for next it
         font::buttonText.textString = buttonTitles[i];
         font::buttonText.updateSize(renderer);
         font::buttonText.x = buttons[i].x + (buttons[i].w / 2 - font::buttonText.w / 2);
@@ -411,8 +436,6 @@ void ViewMenu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *r
 
     int offset ( 40 );
     std::vector<SDL_Rect> buttons(j.size());
-    // int buttonHeight { (windowHeight - offset * static_cast<int>(j.size())) / static_cast<int>(j.size()) };
-    // buttons = SetButtonCoords(windowWidth, windowHeight, 350, buttonHeight, offset, buttons);
 
     int mouseX { };
     int mouseY { };
@@ -430,12 +453,6 @@ void ViewMenu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *r
         {
             switch(ev.key.keysym.sym)
             {
-                case SDLK_PLUS:
-                    ++*whichUI;
-                    break;
-                case SDLK_MINUS:
-                    --*whichUI;
-                    break;
                 case SDLK_ESCAPE:
                     *whichUI = 0;
                     break;
@@ -450,6 +467,7 @@ void ViewMenu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *r
                         if(GetMouseHover(buttons[i], mouseX, mouseY))
                         {
                             obj::posList = j[std::to_string(i + 1)];
+                            // go to window defined when calling function so that it is multipurpose
                             *whichUI = nextWindow;
                         }
                     }
@@ -461,7 +479,7 @@ void ViewMenu(SDL_Renderer *renderer, int windowWidth, int windowHeight, bool *r
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
 
-    // DrawMenuButtons(renderer, buttons, titles, mouseX, mouseY);
+    // draw grid of maps to select
     buttons = DrawGrid(renderer, windowWidth, windowHeight, mouseX, mouseY, 5, 5, buttons.size(), offset, 0, 0, titles);
 
     SDL_RenderPresent(renderer);
@@ -477,12 +495,6 @@ void View(SDL_Renderer *renderer, SDL_Event ev, bool *running, int *whichUI)
         {
             switch(ev.key.keysym.sym)
             {
-                case SDLK_PLUS:
-                    ++*whichUI;
-                    break;
-                case SDLK_MINUS:
-                    --*whichUI;
-                    break;
                 case SDLK_ESCAPE:
                     *whichUI = 2;
                     break;
@@ -494,6 +506,7 @@ void View(SDL_Renderer *renderer, SDL_Event ev, bool *running, int *whichUI)
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
 
+    // draw posList
     for(int i { }; i<obj::posList.size(); ++i)
     {
         if(i < obj::posList.size() - 1)
