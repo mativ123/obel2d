@@ -1,3 +1,5 @@
+#pragma once
+
 class Obel
 {
     double pi { 3.14159265359 };
@@ -61,16 +63,5 @@ class Obel
         {
             x = posList[0][0];
             y = posList[0][1];
-
-            Text text;
-            text.color = { 255, 0, 0 };
-            text.fontSize = 20;
-            text.init(renderer, "arial.ttf");
-            hpText = text;
-        }
-
-        void cleanUp()
-        {
-            hpText.destroyFont();
         }
 };

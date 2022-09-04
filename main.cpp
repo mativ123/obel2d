@@ -15,8 +15,7 @@
 #include "../common/images.h"
 #include "../common/fonts.h"
 #include "json.hpp"
-#include "obel.h"
-#include "towers.h"
+#include "headers.h"
 
 using json = nlohmann::json;
 
@@ -35,22 +34,6 @@ void AddFinalPoint(int mouseX, int mouseY, int windowWidth, int windowHeight);
 void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int windowWidth, int windowHeight, float deltaTime);
 std::vector<SDL_Rect> DrawTowerMenu(int mouseX, int mouseY, SDL_Renderer *renderer, int windowWidth, int windowHeight);
 std::vector<SDL_Rect> DrawGrid(SDL_Renderer *renderer, int width, int height, int mouseX, int mouseY, int rows, int collums, int buttons, int offset, int startX, int startY, std::vector<std::string> buttonTitles);
-
-namespace obj
-{
-    std::vector<Obel> obler { };
-    std::vector<ObelTower> towers;
-    std::vector<std::array<int, 2>> posList;
-}
-
-namespace  img
-{
-    Image obelBilled;
-
-    Image victorBilled;
-
-    Image williamBilled;
-}
 
 int main(int argc, char *argv[])
 {
@@ -77,6 +60,18 @@ int main(int argc, char *argv[])
     img::victorBilled.resizeKA('w', 50, windowHeight);
     img::williamBilled.init(renderer, "william.jpg");
     img::williamBilled.resizeKA('w', 50, windowHeight);
+
+    font::statFont.color = { 0, 0, 0, 255 };
+    font::statFont.fontSize = 50;
+    font::statFont.init(renderer, "arial.ttf");
+
+    font::buttonText.color = { 255, 255, 255 };
+    font::buttonText.fontSize = 40;
+    font::buttonText.init(renderer, "arial.ttf");
+
+    font::obelHp.color = { 255, 0, 0 };
+    font::obelHp.fontSize = 20;
+    font::obelHp.init(renderer, "arial.ttf");
 
     SDL_Event ev;
     bool running { true };
@@ -132,6 +127,10 @@ int main(int argc, char *argv[])
     img::obelBilled.destroyTexture();
     img::victorBilled.destroyTexture();
     img::williamBilled.destroyTexture();
+
+    font::statFont.destroyFont();
+    font::buttonText.destroyFont();
+    font::obelHp.destroyFont();
 
     SDL_Quit();
     IMG_Quit();
@@ -358,10 +357,6 @@ void DrawMenuButtons(SDL_Renderer *renderer, std::vector<SDL_Rect> buttons, std:
     SDL_Color hover { 85, 106, 130, 255 };
     SDL_Color standard { 66, 83, 102, 255 };
 
-    Text buttonText;
-    buttonText.color = { 255, 255, 255 };
-    buttonText.fontSize = 40;
-    buttonText.init(renderer, "arial.ttf");
 
     SDL_Rect textRect;
 
@@ -373,18 +368,16 @@ void DrawMenuButtons(SDL_Renderer *renderer, std::vector<SDL_Rect> buttons, std:
         else
             roundedBoxRGBA(renderer, buttons[i].x + 5, buttons[i].y + 5, buttons[i].x + buttons[i].w - 5, buttons[i].y + buttons[i].h - 5, 15, standard.r, standard.g, standard.b, standard.a);
 
-        buttonText.textString = buttonTitles[i];
-        buttonText.updateSize(renderer);
-        buttonText.x = buttons[i].x + (buttons[i].w / 2 - buttonText.w / 2);
-        buttonText.y = buttons[i].y + (buttons[i].h / 2 - buttonText.h / 2);
-        buttonText.draw(renderer);
-        textRect.h = buttonText.h;
-        textRect.w = buttonText.w;
-        textRect.x = buttonText.x;
-        textRect.y = buttonText.y;
+        font::buttonText.textString = buttonTitles[i];
+        font::buttonText.updateSize(renderer);
+        font::buttonText.x = buttons[i].x + (buttons[i].w / 2 - font::buttonText.w / 2);
+        font::buttonText.y = buttons[i].y + (buttons[i].h / 2 - font::buttonText.h / 2);
+        font::buttonText.draw(renderer);
+        textRect.h = font::buttonText.h;
+        textRect.w = font::buttonText.w;
+        textRect.x = font::buttonText.x;
+        textRect.y = font::buttonText.y;
     }
-
-    buttonText.destroyFont();
 }
 
 bool GetMouseHover(SDL_Rect button, int mouseX, int mouseY)
@@ -523,15 +516,11 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
     static float money { 200 };
     static float hp { 100 };
 
-    Text moneyFont;
-    moneyFont.color = { 0, 0, 0, 255 };
-    moneyFont.fontSize = 50;
-    moneyFont.init(renderer, "arial.ttf");
-    moneyFont.x = moneyFont.y = 0;
-    moneyFont.textString = std::to_string(static_cast<int>(std::round(money)));
-    moneyFont.updateSize(renderer);
-    moneyFont.x = windowWidth - moneyFont.w;
-    moneyFont.y = 0;
+    font::statFont.x = font::statFont.y = 0;
+    font::statFont.textString = "Money: " + std::to_string(static_cast<int>(std::round(money)));
+    font::statFont.updateSize(renderer);
+    font::statFont.x = windowWidth - font::statFont.w;
+    font::statFont.y = 0;
 
     buttons = DrawTowerMenu(mouseX, mouseY, renderer, windowWidth, windowHeight);
 
@@ -550,6 +539,7 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
                     obj::towers.clear();
                     isBuilding = false;
                     money = 10;
+                    hp = 100;
                     break;
                 case SDLK_SPACE:
                     Obel temp;
@@ -557,6 +547,7 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
                     temp.billed = img::obelBilled;
                     temp.speed = 100;
                     temp.hp = 10;
+                    temp.hpText = font::obelHp;
                     obj::obler.push_back(temp);
                     break;
             }
@@ -611,6 +602,15 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
                         temp.moneyPower = 15;
                         obj::towers.push_back(temp);
                         money -= 200;
+                    } else if(GetMouseHover(buttons[5], mouseX, mouseY) && !isBuilding && money >= 20000)
+                    {
+                        isBuilding = true;
+                        ObelTower temp;
+                        temp.billed = img::williamBilled;
+                        temp.type = 1;
+                        temp.moneyPower = 1000;
+                        obj::towers.push_back(temp);
+                        money -= 20000;
                     } else if(mouseX < windowWidth)
                     {
                         isBuilding = false;
@@ -646,11 +646,10 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
 
         if(obj::obler[i].reachedPoint == obj::posList.size() - 1)
         {
-            obj::obler[i].cleanUp();
+            hp -= 1;
             obj::obler.erase(obj::obler.begin() + i);
         } else if(obj::obler[i].hp <= 0)
         {
-            obj::obler[i].cleanUp();
             obj::obler.erase(obj::obler.begin() + i);
             money += 5;
         }
@@ -682,12 +681,25 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
         }
     }
 
-    moneyFont.textString = std::to_string(static_cast<int>(std::round(money)));
-    moneyFont.draw(renderer);
+    font::statFont.textString = "Money: " + std::to_string(static_cast<int>(std::round(money)));
+    font::statFont.draw(renderer);
+    font::statFont.textString = "Hp: " + std::to_string(static_cast<int>(std::round(hp)));
+    font::statFont.x = 0;
+    font::statFont.y = 0;
+    font::statFont.draw(renderer);
 
     SDL_RenderPresent(renderer);
 
-    moneyFont.destroyFont();
+    if(hp <= 0)
+    {
+        *whichUI = 4;
+        for(int i { }; i<obj::obler.size(); ++i)
+            obj::obler.clear();
+        obj::towers.clear();
+        isBuilding = false;
+        money = 10;
+        hp = 100;
+    }
 }
 
 std::vector<SDL_Rect> DrawTowerMenu(int mouseX, int mouseY, SDL_Renderer *renderer, int windowWidth, int windowHeight)
@@ -705,18 +717,13 @@ std::vector<SDL_Rect> DrawTowerMenu(int mouseX, int mouseY, SDL_Renderer *render
 
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
     SDL_RenderFillRect(renderer, &menuRect);
-    buttonList = DrawGrid(renderer, menuRect.w, menuRect.h, mouseX, mouseY, 3, 2, 5, 20, menuRect.x, 0, { "1 dps", "5 dps", "10 dps", "25 dps", "10 mps" });
+    buttonList = DrawGrid(renderer, menuRect.w, menuRect.h, mouseX, mouseY, 3, 2, 6, 20, menuRect.x, 0, { "1 dps\n10", "5 dps\n20", "10 dps\n50", "25 dps\n100", "10 mps\n200", "1000 mps\n20000" });
 
     return buttonList;
 }
 
 std::vector<SDL_Rect> DrawGrid(SDL_Renderer *renderer, int width, int height, int mouseX, int mouseY, int rows, int collums, int buttons, int offset, int startX, int startY, std::vector<std::string> buttonTitles)
 {
-    Text buttonText;
-    buttonText.color = { 255, 255, 255 };
-    buttonText.fontSize = 40;
-    buttonText.init(renderer, "arial.ttf");
-
     SDL_Color hover { 85, 106, 130, 255 };
     SDL_Color standard { 66, 83, 102, 255 };
 
@@ -744,11 +751,11 @@ std::vector<SDL_Rect> DrawGrid(SDL_Renderer *renderer, int width, int height, in
         else
             roundedBoxRGBA(renderer, buttonRect.x + 5, buttonRect.y + 5, buttonRect.x + buttonRect.w - 5, buttonRect.y + buttonRect.h - 5, 25, standard.r, standard.g, standard.b, 255);
 
-        buttonText.textString = buttonTitles[i];
-        buttonText.updateSize(renderer);
-        buttonText.x = buttonRect.x + (buttonRect.w / 2 - buttonText.w / 2);
-        buttonText.y = buttonRect.y + (buttonRect.h / 2 - buttonText.h / 2);
-        buttonText.draw(renderer);
+        font::buttonText.textString = buttonTitles[i];
+        font::buttonText.updateSize(renderer);
+        font::buttonText.x = buttonRect.x + (buttonRect.w / 2 - font::buttonText.w / 2);
+        font::buttonText.y = buttonRect.y + (buttonRect.h / 2 - font::buttonText.h / 2);
+        font::buttonText.draw(renderer);
 
         if((i + 1) % collums == 0)
         {
@@ -759,8 +766,6 @@ std::vector<SDL_Rect> DrawGrid(SDL_Renderer *renderer, int width, int height, in
             x += buttonWidth + offset;
         }
     }
-
-    buttonText.destroyFont();
 
     return buttonList;
 }
