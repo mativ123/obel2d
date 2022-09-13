@@ -24,6 +24,7 @@ class Obel
         float countDown { };
         float hp { };
         float damage { };
+        int chance { };
 
         void drawObel(SDL_Renderer *renderer)
         {
@@ -60,39 +61,9 @@ class Obel
             }
         }
 
-        void initObel(std::vector<std::array<int, 2>> posList, SDL_Renderer *renderer)
+        void initObel(std::vector<std::array<int, 2>> posList)
         {
             x = posList[0][0];
             y = posList[0][1];
         }
 };
-
-namespace obel
-{
-    Obel obel1;
-    obel1.speed = 20;
-    obel1.hp = 10;
-    obel1.damage = 2;
-
-    Obel obel2;
-    obel2.speed = 50;
-    obel2.hp = 20;
-    obel2.damage = 4;
-
-    Obel obel3;
-    obel3.speed = 70;
-    obel3.hp = 30;
-    obel3.damage = 7;
-
-    Obel obel4;
-    obel4.speed = 100;
-    obel4.hp = 50;
-    obel4.damage = 10;
-
-    Obel obel5;
-    obel5.speed = 150;
-    obel5.hp = 70;
-    obel5.damage = 15;
-
-    std::vector<Obel> obelTypes { obel1, obel2, obel3, obel4, obel5 };
-}

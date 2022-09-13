@@ -5,6 +5,7 @@
 #include <array>
 #include <filesystem>
 #include <math.h>
+#include <random>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
@@ -14,8 +15,13 @@
 #include "../common/func.cpp"
 #include "../common/images.h"
 #include "../common/fonts.h"
+
 #include "json.hpp"
-#include "headers.h"
+#include "obel.h"
+#include "towers.h"
+#include "waves.h"
+
+#include "globals.h"
 
 using json = nlohmann::json;
 
@@ -49,6 +55,8 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
 std::vector<SDL_Rect> DrawTowerMenu(int mouseX, int mouseY, SDL_Renderer *renderer, int windowWidth, int windowHeight);
 // draw grid of buttons
 std::vector<SDL_Rect> DrawGrid(SDL_Renderer *renderer, int width, int height, int mouseX, int mouseY, int rows, int collums, int buttons, int offset, int startX, int startY, std::vector<std::string> buttonTitles);
+// put obel types into the wave object
+void fillWaveObelTypes();
 
 int main(int argc, char *argv[])
 {
@@ -89,14 +97,6 @@ int main(int argc, char *argv[])
     font::obelHp.color = { 255, 0, 0 };
     font::obelHp.fontSize = 20;
     font::obelHp.init(renderer, "arial.ttf");
-
-    // initalize each obel type
-    for(int i { }; i<obel::obelTypes.size(); ++i)
-    {
-        obel::obelTypes[i].initObel(obj::posList, renderer);
-        obel::obelTypes[i].billed = img::obelBilled;
-        obel::obelTypes[i].hpText = font::obelHp;
-    }
 
     SDL_Event ev;
     bool running { true };
@@ -526,6 +526,7 @@ void View(SDL_Renderer *renderer, SDL_Event ev, bool *running, int *whichUI)
 
 void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int windowWidth, int windowHeight, float deltaTime)
 {
+    fillWaveObelTypes();
     int mouseX { };
     int mouseY { };
     SDL_GetMouseState(&mouseX, &mouseY);
@@ -541,8 +542,6 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
     static float timeDown { 1 };
     // stores wave we're at
     static int waveIndex { };
-
-    static int kills { };
 
     font::statFont.x = font::statFont.y = 0;
     font::statFont.textString = "Money: " + std::to_string(static_cast<int>(std::round(money)));
@@ -568,6 +567,7 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
                     isBuilding = false;
                     money = 10;
                     hp = 100;
+                    obj::waves.spurts.clear();
                     break;
             }
 
@@ -647,23 +647,28 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
         }
     }
 
-    if(timeDown > 0 && waveIndex < obj::waves.size())
-        timeDown -= deltaTime / obj::waves[waveIndex].spawnRate;
-    else if(obj::waves[waveIndex].obel1 > 0 && waveIndex < obj::waves.size())
-    {
-        // once timeDown reach zero push a obel1 to obler
-        obj::obler.push_back(obj::waves[waveIndex]);
+    if(obj::waves.spurts.size() <= 0)
+        obj::waves.newWave();
 
-        // substract from obel count on current wave
-        --obj::waves[waveIndex].obel1;
-        timeDown = 1;
-    } else if(waveIndex < obj::waves.size())
+    if(obj::waves.spurts[obj::waves.spurtIndex].amount > 0 && timeDown <= 0)
     {
-        // if there is no more obels in the wave go to next one
-        ++waveIndex;
+        obj::obler.push_back(obj::waves.obelTypes[obj::waves.spurts[obj::waves.spurtIndex].type]);
+        --obj::waves.spurts[obj::waves.spurtIndex].amount;
         timeDown = 1;
-        kills = 0;
-    }
+    } else if(obj::waves.spurtIndex + 1 < obj::waves.spurts.size() && timeDown <= 0)
+    {
+        ++obj::waves.spurtIndex;
+        timeDown = 5;
+    } else if(timeDown <= 0)
+    {
+        obj::waves.newWave();
+        timeDown = 10;
+    } else
+        timeDown -= (1 / obj::waves.spawnRate) * deltaTime;
+
+    for(waveSpurt i : obj::waves.spurts)
+        std::cout << i.amount << ", ";
+    std::cout << '\n';
 
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
@@ -689,11 +694,10 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
         {
             obj::obler.erase(obj::obler.begin() + i);
             money += 5;
-            ++kills;
         }
     }
 
-    std::cout << kills << '\n';
+    // std::cout << kills << '\n';
 
     buttons = DrawTowerMenu(mouseX, mouseY, renderer, windowWidth, windowHeight);
     if(isBuilding)
@@ -811,4 +815,51 @@ std::vector<SDL_Rect> DrawGrid(SDL_Renderer *renderer, int width, int height, in
     }
 
     return buttonList;
+}
+
+void fillWaveObelTypes()
+{
+    // type 1
+    Obel temp;
+    temp.speed = 20;
+    temp.hp = 10;
+    temp.damage = 2;
+    temp.chance = 100;
+    obj::waves.obelTypes.push_back(temp);
+
+    // type 2
+    temp.speed = 50;
+    temp.hp = 20;
+    temp.damage = 4;
+    temp.chance = 50;
+    obj::waves.obelTypes.push_back(temp);
+
+    // type 3
+    temp.speed = 70;
+    temp.hp = 30;
+    temp.damage = 7;
+    temp.chance = 20;
+    obj::waves.obelTypes.push_back(temp);
+
+    // type 4
+    temp.speed = 100;
+    temp.hp = 50;
+    temp.damage = 10;
+    temp.chance = 5;
+    obj::waves.obelTypes.push_back(temp);
+
+    // type 5
+    temp.speed = 150;
+    temp.hp = 70;
+    temp.damage = 15;
+    temp.chance = 1;
+    obj::waves.obelTypes.push_back(temp);
+
+    // initalize each obel type
+    for(int i { }; i<obj::waves.obelTypes.size(); ++i)
+    {
+        obj::waves.obelTypes[i].initObel(obj::posList);
+        obj::waves.obelTypes[i].billed = img::obelBilled;
+        obj::waves.obelTypes[i].hpText = font::obelHp;
+    }
 }
