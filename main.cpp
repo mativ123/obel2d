@@ -90,6 +90,14 @@ int main(int argc, char *argv[])
     font::obelHp.fontSize = 20;
     font::obelHp.init(renderer, "arial.ttf");
 
+    // initalize each obel type
+    for(int i { }; i<obel::obelTypes.size(); ++i)
+    {
+        obel::obelTypes[i].initObel(obj::posList, renderer);
+        obel::obelTypes[i].billed = img::obelBilled;
+        obel::obelTypes[i].hpText = font::obelHp;
+    }
+
     SDL_Event ev;
     bool running { true };
 
@@ -529,6 +537,13 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
     static float money { 200 };
     static float hp { 100 };
 
+    // float that stores time since last obel
+    static float timeDown { 1 };
+    // stores wave we're at
+    static int waveIndex { };
+
+    static int kills { };
+
     font::statFont.x = font::statFont.y = 0;
     font::statFont.textString = "Money: " + std::to_string(static_cast<int>(std::round(money)));
     font::statFont.updateSize(renderer);
@@ -553,15 +568,6 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
                     isBuilding = false;
                     money = 10;
                     hp = 100;
-                    break;
-                case SDLK_SPACE:
-                    Obel temp;
-                    temp.initObel(obj::posList, renderer);
-                    temp.billed = img::obelBilled;
-                    temp.speed = 100;
-                    temp.hp = 10;
-                    temp.hpText = font::obelHp;
-                    obj::obler.push_back(temp);
                     break;
             }
 
@@ -641,6 +647,24 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
         }
     }
 
+    if(timeDown > 0 && waveIndex < obj::waves.size())
+        timeDown -= deltaTime / obj::waves[waveIndex].spawnRate;
+    else if(obj::waves[waveIndex].obel1 > 0 && waveIndex < obj::waves.size())
+    {
+        // once timeDown reach zero push a obel1 to obler
+        obj::obler.push_back(obj::waves[waveIndex]);
+
+        // substract from obel count on current wave
+        --obj::waves[waveIndex].obel1;
+        timeDown = 1;
+    } else if(waveIndex < obj::waves.size())
+    {
+        // if there is no more obels in the wave go to next one
+        ++waveIndex;
+        timeDown = 1;
+        kills = 0;
+    }
+
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
 
@@ -665,8 +689,11 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
         {
             obj::obler.erase(obj::obler.begin() + i);
             money += 5;
+            ++kills;
         }
     }
+
+    std::cout << kills << '\n';
 
     buttons = DrawTowerMenu(mouseX, mouseY, renderer, windowWidth, windowHeight);
     if(isBuilding)
@@ -699,6 +726,9 @@ void Play(SDL_Renderer *renderer, bool *running, int *whichUI, SDL_Event ev, int
     font::statFont.textString = "Hp: " + std::to_string(static_cast<int>(std::round(hp)));
     font::statFont.x = 0;
     font::statFont.y = 0;
+    font::statFont.draw(renderer);
+    font::statFont.textString = "wave: " + std::to_string(waveIndex);
+    font::statFont.y = windowHeight - font::statFont.h;
     font::statFont.draw(renderer);
 
     SDL_RenderPresent(renderer);
